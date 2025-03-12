@@ -88,16 +88,22 @@ void loadGraph(FILE* file) {
             printf("connections[%d] = %d\n", i, connections[i]);
         } 
     }
-    if (fgets(line, sizeof(line), file) != NULL){
+   if (fgets(line, sizeof(line), file) != NULL) {
         line[strcspn(line, "\n")] = '\0';
-        int sections_cnt = how_many_digits(line);
-        int sections[sections_cnt];
+       // printf("Ostatnia linia: %s\n", line);
+        int lastLineCount = how_many_digits(line);
+        int lastConnections[lastLineCount];
+        read_digits(line, lastConnections);
+
+        // Wypisanie zawartości ostatnich połączeń
+        for (int i = 0; i < lastLineCount; i++) {
+            printf("lastConnections[%d] = %d\n", i, lastConnections[i]);
+        }
     } 
     fclose(file);
     //obliczam liczbe wezlow zeby moc stworzyc graf odpowiedniej wielkosci potem trzeba bedzie wzcytac reszte plikow
     printf("Liczba liczb w wprowadzonej linii: %d\n", count);
-}
-
+} 
 // Funkcja tworząca graf
 Graph* createGraph(int vertices) {
     Graph* graph = malloc(sizeof(Graph));
@@ -153,7 +159,6 @@ int main(int argc, char **argv) {
     addEdge(graph, 2, 3);
     addEdge(graph, 3, 4);
     //addEdge(graph, 2, 4);
-
     printGraph(graph);
 
     return 0;
