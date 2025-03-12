@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 
 // Struktura reprezentująca węzeł listy sąsiedztwa
 typedef struct Node {
@@ -23,32 +25,33 @@ Node* createNode(int v) {
 
 void loadGraph(FILE* file) {
     int maxWidth;
-    fscanf(file, "%d", &maxWidth);  // Wczytanie maksymalnej liczby węzłów w wierszu
+    fscanf(file, "%d\n", &maxWidth);
     printf("Maksymalna liczba wezlow w wierszu: %d\n", maxWidth);
-    int x = 0;
-    int table[maxWidth][maxWidth];
-    for(int i=0;i<maxWidth;i++){
-        for(int j=0;j<maxWidth;j++){
-            table[i][j]=0;
-        }
-    }
-    int i=0, pom=0;
-    while(fscanf(file, "%d;", &x)==1){
-        table[i][x] = 1;
-        if(i>0){
-            if(x<pom){
-                i++;
-                pom = x;
+    int vertecies = 0;
+    char line[300];  
+    int count = 0;   
+    char *token;  
+    if (fgets(line, sizeof(line), file) != NULL){
+        //printf("%s\n", line);
+        line[strcspn(line, "\n")] = '\0';
+        token = strtok(line, ";");
+        while (token != NULL) {
+            int is_number = 1;
+            for (int i = 0; token[i] != '\0'; i++) {
+                if (!isdigit(token[i])) {
+                    is_number = 0;
+                    break;
+                }
             }
+            if (is_number) {
+                count++;
+            }
+            token = strtok(NULL, ";");
         }
-        pom = x;
     }
-    for(int i=0;i<maxWidth;i++){
-        for(int j=0;j<maxWidth;j++){
-            printf("%d ", table[i][j]);
-        }
-        printf("\n");
-    }
+    fclose(file);
+
+    printf("Liczba liczb w wprowadzonej linii: %d\n", count);
 }
 
 // Funkcja tworząca graf
@@ -89,6 +92,8 @@ void printGraph(Graph* graph) {
     }
 }
 
+
+
 // Główna funkcja
 int main(int argc, char **argv) {
     FILE *in = argc > 1 ? fopen(argv[1], "r"): stdin;
@@ -103,6 +108,7 @@ int main(int argc, char **argv) {
     addEdge(graph, 1, 4);
     addEdge(graph, 2, 3);
     addEdge(graph, 3, 4);
+    //addEdge(graph, 2, 4);
 
     printGraph(graph);
 
