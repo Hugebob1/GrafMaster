@@ -3,6 +3,9 @@
 #include <string.h>
 #include <ctype.h>
 
+#define max_4line 800
+#define def_line 300
+
 // Struktura reprezentująca węzeł listy sąsiedztwa
 typedef struct Node {
     int vertex;
@@ -23,32 +26,73 @@ Node* createNode(int v) {
     return newNode;
 }
 
+int how_many_digits(const char *line) {
+    int count = 0;
+    const char *p = line;
+    while (*p) {
+        if (*p == ';') {
+            count++;
+        }
+        p++;
+    }
+    // Jeśli linia nie jest pusta, liczba tokenów to liczba średników + 1.
+    return (strlen(line) > 0) ? count + 1 : 0;
+}
+
+void read_digits(char *line4, int *connections){
+    char *token = strtok(line4, ";");
+    int index = 0;
+    while (token != NULL) {
+        int is_number = 1;
+            // Sprawdzamy, czy token zawiera tylko cyfry
+        for (int i = 0; token[i] != '\0'; i++) {
+            if (!isdigit(token[i])) {
+                is_number = 0;
+                break;
+            }
+        }
+        if (is_number) {
+            // Konwersja tokena na liczbę całkowitą i zapis do tablicy
+            connections[index++] = atoi(token);
+        }
+        token = strtok(NULL, ";");
+    }
+}
+
 void loadGraph(FILE* file) {
     int maxWidth;
     fscanf(file, "%d\n", &maxWidth);
     printf("Maksymalna liczba wezlow w wierszu: %d\n", maxWidth);
     int vertecies = 0;
-    char line[300];  
+    char line[def_line];
+    char line4[max_4line];
     int count = 0;   
     char *token;  
     if (fgets(line, sizeof(line), file) != NULL){
         //printf("%s\n", line);
-        line[strcspn(line, "\n")] = '\0';
-        token = strtok(line, ";");
-        while (token != NULL) {
-            int is_number = 1;
-            for (int i = 0; token[i] != '\0'; i++) {
-                if (!isdigit(token[i])) {
-                    is_number = 0;
-                    break;
-                }
-            }
-            if (is_number) {
-                count++;
-            }
-            token = strtok(NULL, ";");
-        }
+        count = how_many_digits(line);
     }
+    if (fgets(line, sizeof(line), file) != NULL){
+        line[strcspn(line, "\n")] = '\0';
+        //printf("%s\n", line);
+    }
+    if (fgets(line4, sizeof(line4), file) != NULL){
+        
+        line4[strcspn(line4, "\n")] = '\0';
+        //printf("%d\n", how_many_digits(line4));
+        int numtokens = how_many_digits(line4);
+        int connections[numtokens];
+        read_digits(line4, connections);
+        //Wypisanie zawartości tablicy connections
+        for (int i = 0; i <numtokens; i++) {
+            printf("connections[%d] = %d\n", i, connections[i]);
+        } 
+    }
+    if (fgets(line, sizeof(line), file) != NULL){
+        line[strcspn(line, "\n")] = '\0';
+        int sections_cnt = how_many_digits(line);
+        int sections[sections_cnt];
+    } 
     fclose(file);
     //obliczam liczbe wezlow zeby moc stworzyc graf odpowiedniej wielkosci potem trzeba bedzie wzcytac reszte plikow
     printf("Liczba liczb w wprowadzonej linii: %d\n", count);
