@@ -50,7 +50,7 @@ void loadGraph(FILE* file) {
         }
     }
     fclose(file);
-
+    //obliczam liczbe wezlow zeby moc stworzyc graf odpowiedniej wielkosci potem trzeba bedzie wzcytac reszte plikow
     printf("Liczba liczb w wprowadzonej linii: %d\n", count);
 }
 
