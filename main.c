@@ -12,5 +12,9 @@ int main(int argc, char **argv) {
 
     printGraph(graph);
 
+    int k = 5;
+    double max_diff_percentage = 10;
+
+    exportGraph(graph, "graph_original.csv");  // Zapisz oryginalny graf
     return 0;
 }

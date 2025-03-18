@@ -92,6 +92,9 @@ Graph* loadGraph(FILE* file) {
 void printGraph(Graph* graph) {
     for (int i = 0; i < graph->numVertices; i++) {
         Node* temp = graph->adjLists[i];
+        if(temp == NULL) {
+            continue;
+        }
         printf("Wierzcholek %d:\n", i);
         while (temp) {
             printf(" -> %d", temp->vertex);
@@ -99,4 +102,25 @@ void printGraph(Graph* graph) {
         }
         printf("\n");
     }
+}
+
+void exportGraph(Graph* graph, const char* filename) {
+    FILE* file = fopen(filename, "w");
+    if (!file) {
+        printf("Nie można otworzyć pliku %s\n", filename);
+        return;
+    }
+
+    for (int i = 0; i < graph->numVertices; i++) {
+        Node* temp = graph->adjLists[i];
+        while (temp) {
+            if (i < temp->vertex) { // Unikamy duplikowania krawędzi w nieskierowanym grafie
+                fprintf(file, "%d,%d\n", i, temp->vertex);
+            }
+            temp = temp->next;
+        }
+    }
+    
+    fclose(file);
+    printf("Graf zapisano do %s\n", filename);
 }
