@@ -7,6 +7,7 @@
 #include <stdbool.h>
 
 // Structure for adjacency list node
+
 typedef struct Node {
     int vertex;
     struct Node* next;
@@ -14,9 +15,13 @@ typedef struct Node {
 
 // Graph structure
 typedef struct Graph {
+    int maxwidth;
     int numVertices;
     Node** adjLists;
+    int** xy;
 } Graph;
+
+
 
 // Function prototypes
 Node* createNode(int v);
