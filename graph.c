@@ -10,14 +10,36 @@ Node* createNode(int v) {
 }
 
 // Create a new graph
-Graph* createGraph(int vertices) {
-    Graph* graph = malloc(sizeof(Graph));
+Graph* createGraph(int vertices, int maxwidth) {
+    Graph* graph = (Graph*)malloc(sizeof(Graph));
     graph->numVertices = vertices;
-    graph->adjLists = malloc(vertices * sizeof(Node*));
+    graph->maxwidth = maxwidth;
 
+    graph->adjLists = (Node**)malloc(vertices * sizeof(Node*));
     for (int i = 0; i < vertices; i++) {
         graph->adjLists[i] = NULL;
     }
+
+    // Alokacja pola xy
+    graph->xy = (int**)malloc(maxwidth * sizeof(int*));
+    graph->xyToVertex = (int**)malloc(maxwidth * sizeof(int*));
+    for (int i = 0; i < maxwidth; i++) {
+        graph->xy[i] = (int*)calloc(maxwidth, sizeof(int));
+        graph->xyToVertex[i] = (int*)malloc(maxwidth * sizeof(int));
+        for (int j = 0; j < maxwidth; j++) {
+            graph->xyToVertex[i][j] = -1; // -1 oznacza brak wierzchołka
+        }
+    }
+
+    graph->vertexToXY = (int*)malloc(vertices * sizeof(int));
+    graph->visited = (int*)calloc(vertices, sizeof(int));
+    graph->componentId = (int*)malloc(vertices * sizeof(int));
+    for (int i = 0; i < vertices; i++) {
+        graph->componentId[i] = -1;
+    }
+
+    graph->numComponents = 0;
+
     return graph;
 }
 
@@ -37,7 +59,7 @@ Graph* loadGraph(FILE* file) {
     int maxWidth;
     fscanf(file, "%d\n", &maxWidth);
     printf("Maksymalna liczba wezlow w wierszu: %d\n", maxWidth);
-
+    Graph* err = createGraph(0, 0);
     int vertices = 0, numtokens = 0;
     char line[5000];
     char line4[8000];
@@ -52,7 +74,7 @@ Graph* loadGraph(FILE* file) {
         vertices = how_many_digits(line);
         int Tvertices[vertices];
         read_digits(line, Tvertices);
-        Graph* graph = createGraph(vertices);
+        Graph* graph = createGraph(vertices, maxWidth);
         graph->maxwidth = maxWidth;
 
         if (fgets(line, sizeof(line), file) != NULL) {
@@ -61,10 +83,6 @@ Graph* loadGraph(FILE* file) {
             int sect[numtokens];
             int index = 0, vertID=0;
             read_digits(line, sect);
-            graph->xy = (int**)malloc(graph->maxwidth * sizeof(int*));
-            for (int i = 0; i < graph->maxwidth; i++) {
-                graph->xy[i] = (int*)malloc(graph->maxwidth * sizeof(int));
-            }
             
             for (int i = 0; i < numtokens - 1; i++) {
                 int a = sect[i], b = sect[i + 1];
@@ -77,7 +95,15 @@ Graph* loadGraph(FILE* file) {
             }
             for (int i = 0; i < graph->maxwidth; i++) {
                 for (int j = 0; j < graph->maxwidth; j++) {
-                    graph->xy[i][j] = test[i][j];  
+                    graph->xy[i][j] = test[i][j];
+
+                    if (test[i][j] == 1) {
+                        graph->xyToVertex[i][j] = vertID;
+                        graph->vertexToXY[vertID] = i * graph->maxwidth + j;
+                        vertID++;
+                    } else {
+                        graph->xyToVertex[i][j] = -1;
+                    }
                 }
             }
             if (fgets(line4, sizeof(line4), file) != NULL) {
@@ -112,11 +138,11 @@ Graph* loadGraph(FILE* file) {
                     }
                 }
             }
-        
-            fclose(file);
             return graph;
         }
     }
+    fclose(file);
+    return err;
 }
 
 // Print graph adjacency list
