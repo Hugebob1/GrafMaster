@@ -2,19 +2,31 @@
 #include "utils.h"
 
 int main(int argc, char **argv) {
-    FILE *in = argc > 1 ? fopen(argv[1], "r") : stdin;
-    if (!in) {
-        perror("File opening failed");
-        return 1;
+    
+
+    
+    GraphChunk graph = addEdges(argv[1]);
+    printGraphChunk(graph);
+    //makeGraphUndirected(graph);
+    if(validateGraphChunk(graph)){
+        printf("Graf wczytano poprawnie\n");
+    } else {
+        printf("Bledy w strukturze grafu\n");
     }
-
-    Graph* graph = loadGraph(in);
-
-    printGraph(graph);
-
-    int k = 5;
-    double max_diff_percentage = 10;
-
-    exportGraph(graph, "graph_original.csv");  // Zapisz oryginalny graf
+    //saveGraphUniqueUndirected(graph, "graph_original.csv");
+    freeGraphChunk(graph);
     return 0;
+
+    //exportGraph(graph, "graph_original.csv");  // Zapisz oryginalny graf
+    // if (validateGraph(graph)) {
+    //     printf("Graf wczytano poprawnie\n");
+    // } else {
+    //     printf("Bledy w strukturze grafu\n");
+    // }
+    //test binarnego
+    //saveGraphBinary(graph, "graph_original.bin");
+    //Graph* graph2 = loadGraphBinary("graph_original.bin");
+    //exportGraph(graph2, "graph_original2.csv");
+
+    //return 0;
 }

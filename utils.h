@@ -7,7 +7,7 @@
 #include <ctype.h>
 
 // Function prototypes
-int how_many_digits(const char *line);
-void read_digits(char *line4, int *connections);
+int numElements(const char *fileName, int linecnt);
+int *readLine(const char *fileName, int linecnt, int n);
 
 #endif
