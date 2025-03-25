@@ -8,6 +8,8 @@
 #include <time.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <math.h>
+#include <ctype.h>
 
 #define LINE_BUF 65536
 //struktura pliku binarnego
@@ -44,6 +46,15 @@ typedef struct GraphChunk {
 } *GraphChunk;
 
 
+//struktura pliku binarnego
+// [degree (uint8_t)] 
+// [neighbor_1 (uint16_t)]
+// [neighbor_2 (uint16_t)]
+// ...
+// [neighbor_degree (uint16_t)]
+
+
+
 
 
 // Function prototypes
@@ -53,10 +64,16 @@ GraphChunk addEdges(const char *fileName);
 int findLastNode(const char *fileName);
 void printGraphChunk(GraphChunk graph);
 void freeGraphChunk(GraphChunk graph);
-void makeGraphUndirected(GraphChunk graph);
 void addUndirectedEdge(GraphChunk* idMap, int u, int v);
 bool validateGraphChunk(GraphChunk graph);
-void saveGraphUniqueUndirected(GraphChunk graph, const char* filename);
+void exportGraph(GraphChunk graph, const char* filename);
+void saveGraphBinaryCompact(GraphChunk graph, const char* filename);
+GraphChunk loadGraphFromBinaryToChunk(const char* filename);
+int countVertices(GraphChunk graph);
+void bfsAssign(GraphChunk graph, int* visited, int* assignment, int currentGroup, int targetSize, int totalVertices);
+GraphChunk extractSubgraph(GraphChunk original, int* assignment, int group, int totalVertices);
+GraphChunk* splitGraphBalancedConnected(GraphChunk graph, int numParts, float maxDiffPercent);
+
 
 
 // Node* createNode(int v);

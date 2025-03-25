@@ -163,6 +163,39 @@ void addUndirectedEdge(GraphChunk* idMap, int u, int v) {
 }
 
 
+
+
+void makeGraphUndirected(GraphChunk graph) {
+    for (GraphChunk current = graph; current != NULL; current = current->next) {
+        int from = current->vertex->id;
+
+        for (int i = 0; i < current->vertex->degree; i++) {
+            int to = current->vertex->edges[i];
+
+            // Znajdź "to"
+            for (GraphChunk rev = graph; rev != NULL; rev = rev->next) {
+                if (rev->vertex && rev->vertex->id == to) {
+                    // Sprawdź, czy from już istnieje w jego sąsiadach
+                    bool found = false;
+                    for (int j = 0; j < rev->vertex->degree; j++) {
+                        if (rev->vertex->edges[j] == from) {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found && rev->vertex->degree < rev->vertex->numEdges) {
+                        rev->vertex->edges[rev->vertex->degree++] = from;
+                    }
+                    break;
+                }
+            }
+        }
+    }
+}
+
+
+
 void printGraphChunk(GraphChunk graph) {
     GraphChunk current = graph;
 
@@ -257,124 +290,238 @@ bool validateGraphChunk(GraphChunk graph) {
     return valid;
 }
 
-void saveGraphUniqueUndirected(GraphChunk graph, const char* filename) {
+void exportGraph(GraphChunk graph, const char* filename) {
     FILE* file = fopen(filename, "w");
     if (!file) {
         perror("Nie można otworzyć pliku do zapisu");
         return;
     }
 
+    GraphChunk current = graph;
+
+    while (current) {
+        if (!current->vertex) {
+            current = current->next;
+            continue;
+        }
+        fprintf(file, "%d: ", current->vertex->id);
+        for (int i = 0; i < current->vertex->degree; i++) {
+            if(i==current->vertex->degree-1)
+                fprintf(file, "%d\n", current->vertex->edges[i]);
+            else
+                fprintf(file, "%d ", current->vertex->edges[i]);
+        }
+        current = current->next;
+    }
+
+    fclose(file);
+    printf("Graf zapisany do pliku: %s\n", filename);
+}
+
+void saveGraphBinaryCompact(GraphChunk graph, const char* filename) {
+    FILE* file = fopen(filename, "wb");
+    if (!file) {
+        perror("Nie można otworzyć pliku binarnego");
+        return;
+    }
+
+    int totalVertices = graph->totalVertices;
+    fwrite(&totalVertices, sizeof(int), 1, file); // <<--- nagłówek
+
     for (GraphChunk curr = graph; curr != NULL; curr = curr->next) {
-        int u = curr->vertex->id;
+        uint8_t degree = (uint8_t) curr->vertex->degree;
+        fwrite(&degree, sizeof(uint8_t), 1, file);
 
-        for (int i = 0; i < curr->vertex->degree; i++) {
-            int v = curr->vertex->edges[i];
-
-            if (u < v) {
-                fprintf(file, "%d - %d\n", u, v);
-            }
+        for (int i = 0; i < degree; i++) {
+            uint16_t neighbor = (uint16_t) curr->vertex->edges[i];
+            fwrite(&neighbor, sizeof(uint16_t), 1, file);
         }
     }
 
     fclose(file);
-    printf("Graf zapisany do pliku (unikalne krawędzie nieskierowane): %s\n", filename);
+}
+
+GraphChunk loadGraphFromBinaryToChunk(const char* filename) {
+    FILE* file = fopen(filename, "rb");
+    if (!file) {
+        perror("Nie można otworzyć pliku binarnego do odczytu");
+        return NULL;
+    }
+
+    // 📥 Odczytaj liczbę wierzchołków z nagłówka
+    int numVertices = 0;
+    fread(&numVertices, sizeof(int), 1, file);
+
+    GraphChunk head = NULL;
+    GraphChunk last = NULL;
+
+    for (int nodeId = 0; nodeId < numVertices; nodeId++) {
+        uint8_t degree;
+        fread(&degree, sizeof(uint8_t), 1, file);
+
+        Vertex vertex = createVertex(nodeId, degree);
+        vertex->degree = degree;
+
+        for (int i = 0; i < degree; i++) {
+            uint16_t neighbor;
+            fread(&neighbor, sizeof(uint16_t), 1, file);
+            vertex->edges[i] = neighbor;
+        }
+
+        GraphChunk chunk = malloc(sizeof(struct GraphChunk));
+        chunk->vertex = vertex;
+        chunk->totalVertices = numVertices;
+        chunk->next = NULL;
+
+        if (!head) {
+            head = chunk;
+        } else {
+            last->next = chunk;
+        }
+        last = chunk;
+    }
+
+    fclose(file);
+    return head;
 }
 
 
+int countVertices(GraphChunk graph) {
+    int count = 0;
+    for (GraphChunk curr = graph; curr != NULL; curr = curr->next)
+        count++;
+    return count;
+}
 
+void bfsAssign(GraphChunk graph, int* visited, int* assignment, int currentGroup, int targetSize, int totalVertices) {
+    int queue[totalVertices];
+    int front = 0, back = 0;
 
-// void exportGraph(Graph* graph, const char* filename) {
-//     FILE* file = fopen(filename, "w");
-//     if (!file) {
-//         printf("Nie można otworzyc pliku %s\n", filename);
-//         return;
-//     }
+    // Znajdź pierwszy nieodwiedzony wierzchołek
+    GraphChunk start = graph;
+    while (start && visited[start->vertex->id])
+        start = start->next;
 
-//     for (int i = 0; i < graph->numVertices; i++) {
-//         Node* temp = graph->adjLists[i];
-//         while (temp) {
-//             if (i < temp->vertex) { // Unikamy duplikowania krawędzi w nieskierowanym grafie
-//                 fprintf(file, "%d,%d\n", i, temp->vertex);
-//             }
-//             temp = temp->next;
-//         }
-//     }
-    
-//     fclose(file);
-//     printf("Graf zapisano do %s\n", filename);
-// }
+    if (!start) return;
 
-// void saveGraphBinary(Graph* graph, const char* filename) {
-//     FILE* file = fopen(filename, "wb");
-//     if (!file) {
-//         perror("Nie mozna otworzyc pliku do zapisu");
-//         return;
-//     }
+    int assigned = 0;
+    queue[back++] = start->vertex->id;
+    visited[start->vertex->id] = 1;
+    assignment[start->vertex->id] = currentGroup;
+    assigned++;
 
-//     uint32_t numVertices = graph->numVertices;
-//     uint32_t edgeCount = 0;
+    while (front < back && assigned < targetSize) {
+        int u = queue[front++];
+        GraphChunk uChunk = graph;
+        while (uChunk && uChunk->vertex->id != u)
+            uChunk = uChunk->next;
 
-//     // Najpierw policz liczbę krawędzi
-//     for (int i = 0; i < numVertices; i++) {
-//         for (Node* n = graph->adjLists[i]; n != NULL; n = n->next) {
-//             if (i < n->vertex) edgeCount++;  // unikamy duplikatów w grafie nieskierowanym
-//         }
-//     }
+        if (!uChunk) continue;
 
-//     fwrite(&numVertices, sizeof(uint32_t), 1, file);
-//     fwrite(&edgeCount, sizeof(uint32_t), 1, file);
+        for (int i = 0; i < uChunk->vertex->degree; i++) {
+            int v = uChunk->vertex->edges[i];
+            if (!visited[v]) {
+                queue[back++] = v;
+                visited[v] = 1;
+                assignment[v] = currentGroup;
+                assigned++;
+                if (assigned >= targetSize) break;
+            }
+        }
+    }
+}
 
-//     // Teraz zapisz krawędzie
-//     for (int i = 0; i < numVertices; i++) {
-//         for (Node* n = graph->adjLists[i]; n != NULL; n = n->next) {
-//             if (i < n->vertex) {
-//                 Edge e = { (uint32_t)i, (uint32_t)n->vertex };
-//                 fwrite(&e, sizeof(Edge), 1, file);
-//             }
-//         }
-//     }
+GraphChunk extractSubgraph(GraphChunk original, int* assignment, int group, int totalVertices) {
+    GraphChunk head = NULL, last = NULL;
 
-//     fclose(file);
-//     printf("Zapisano graf do %s (%u wierzcholkow, %u krawedzi)\n", filename, numVertices, edgeCount);
-// }
+    for (GraphChunk curr = original; curr != NULL; curr = curr->next) {
+        int id = curr->vertex->id;
+        if (assignment[id] != group) continue;
 
-// Graph* loadGraphBinary(const char* filename) {
-//     FILE* file = fopen(filename, "rb");
-//     if (!file) {
-//         perror("Nie mozna otworzyć pliku do odczytu");
-//         return NULL;
-//     }
+        // policz sąsiadów należących do tej samej grupy
+        int count = 0;
+        for (int i = 0; i < curr->vertex->degree; i++) {
+            int neighbor = curr->vertex->edges[i];
+            if (assignment[neighbor] == group)
+                count++;
+        }
 
-//     uint32_t numVertices, numEdges;
+        Vertex v = createVertex(id, count);
+        v->degree = count;
+        int k = 0;
+        for (int i = 0; i < curr->vertex->degree; i++) {
+            int neighbor = curr->vertex->edges[i];
+            if (assignment[neighbor] == group)
+                v->edges[k++] = neighbor;
+        }
 
-//     if (fread(&numVertices, sizeof(uint32_t), 1, file) != 1 ||
-//         fread(&numEdges, sizeof(uint32_t), 1, file) != 1) {
-//         fprintf(stderr, "Blad: nie udalo sie wczytac naglowka pliku.\n");
-//         fclose(file);
-//         return NULL;
-//     }
+        GraphChunk chunk = malloc(sizeof(struct GraphChunk));
+        chunk->vertex = v;
+        chunk->totalVertices = totalVertices;
+        chunk->next = NULL;
 
-//     // Stwórz pusty graf
-//     Graph* graph = createGraph(numVertices, 0); // 0 = maxWidth nieistotne tutaj
-//     if (!graph) {
-//         fclose(file);
-//         return NULL;
-//     }
+        if (!head) head = chunk;
+        else last->next = chunk;
 
-//     for (uint32_t i = 0; i < numEdges; i++) {
-//         uint32_t from, to;
-//         if (fread(&from, sizeof(uint32_t), 1, file) != 1 ||
-//             fread(&to, sizeof(uint32_t), 1, file) != 1) {
-//             fprintf(stderr, "Blad: nie udalo sie wczytac krawedzi %u.\n", i);
-//             freeGraph(graph);
-//             fclose(file);
-//             return NULL;
-//         }
-//         addEdge(graph, from, to); // zakładamy, że addEdge dodaje też odwrotnie jeśli graf nieskierowany
-//     }
+        last = chunk;
+    }
 
-//     fclose(file);
-//     printf("Wczytano graf z pliku %s (%u wierzcholkow, %u krawedzi)\n", filename, numVertices, numEdges);
-//     return graph;
-// }
+    return head;
+}
+
+GraphChunk* splitGraphBalancedConnected(GraphChunk graph, int numParts, float maxDiffPercent) {
+    int totalVertices = countVertices(graph);
+    if (numParts <= 0 || totalVertices == 0) {
+        printf("Nieprawidlowa liczba czesci lub pusty graf.\n");
+        return NULL;
+    }
+
+    int* visited = calloc(totalVertices, sizeof(int));
+    int* assignment = malloc(sizeof(int) * totalVertices);
+    memset(assignment, -1, sizeof(int) * totalVertices);
+
+    int targetSize = totalVertices / numParts;
+    int remaining = totalVertices;
+
+    for (int i = 0; i < numParts; i++) {
+        int size = (i == numParts - 1) ? remaining : targetSize;
+        bfsAssign(graph, visited, assignment, i, size, totalVertices);
+        remaining -= size;
+    }
+
+    free(visited);
+
+    // Zbuduj podgrafy
+    GraphChunk* parts = malloc(sizeof(GraphChunk) * numParts);
+    int sizes[numParts];
+    int minSize = totalVertices, maxSize = 0;
+
+    for (int i = 0; i < numParts; i++) {
+        parts[i] = extractSubgraph(graph, assignment, i, totalVertices);
+
+        int count = countVertices(parts[i]);
+        sizes[i] = count;
+        if (count < minSize) minSize = count;
+        if (count > maxSize) maxSize = count;
+    }
+
+    float avg = (float)totalVertices / numParts;
+    float diff = maxSize - minSize;
+    float diffPercent = (diff / avg) * 100.0f;
+
+    if (diffPercent > maxDiffPercent) {
+        printf("❌ Nie da sie podzielic grafu na %d części z roznica≤ %.2f%% (rzeczywista: %.2f%%)\n",
+               numParts, maxDiffPercent, diffPercent);
+        free(assignment);
+        for (int i = 0; i < numParts; i++) {
+            // zwalnianie pamięci jeśli chcesz
+        }
+        free(parts);
+        return NULL;
+    }
+
+    printf("✅ Podzielono graf na %d części (max roznica: %.2f%%)\n", numParts, diffPercent);
+    free(assignment);
+    return parts;
+}
 
