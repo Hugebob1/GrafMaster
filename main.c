@@ -114,9 +114,9 @@ int main(int argc, char **argv) {
     // Zwalnianie pamięci
     freeGraphChunk(graph);
 
+    
     clock_t end = clock();
     double time_spent = (double)(end - start) / CLOCKS_PER_SEC;
-
     printf("Czas dzialania: %.6f sekund\n", time_spent);
 
     return 0;
