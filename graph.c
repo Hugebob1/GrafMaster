@@ -72,10 +72,17 @@ GraphChunk createGraphChunk(const char *fileName) {
 GraphChunk addEdges(const char *fileName) {
     const int n2 = numElements(fileName, 2); // liczba wierzchołków
     const int numConnections = numElements(fileName, 4);
-    const int numSections = numElements(fileName, 5);
+    const int lines = numLines(fileName);
+    int graphNumber = 1;
+    if(lines>5){
+        printf("liczba grafow w pliku: %d\n", lines-4);
+        printf("Ktory graf mam wczytac? (1 - %d)\n", lines-4);
+        scanf("%d", &graphNumber);
+    }
+    const int numSections = numElements(fileName, graphNumber+4);
 
     int *connections = readLine(fileName, 4, numConnections);
-    int *sections = readLine(fileName, 5, numSections);
+    int *sections = readLine(fileName, graphNumber+4, numSections);
 
     // 🔧 Przygotuj tablicę GraphChunk dla każdego wierzchołka 0..n2-1
     GraphChunk* idMap = calloc(n2, sizeof(GraphChunk));

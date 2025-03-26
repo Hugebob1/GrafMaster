@@ -8,6 +8,7 @@
 
 // Function prototypes
 int numElements(const char *fileName, int linecnt);
+int numLines(const char *filename);
 int *readLine(const char *fileName, int linecnt, int n);
 
 #endif

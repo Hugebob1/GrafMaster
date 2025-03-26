@@ -25,6 +25,25 @@ int numElements(const char *filename, int targetLine) {
     return count;
 }
 
+int numLines(const char *filename) {
+    FILE *fp = fopen(filename, "r");
+    if (!fp) {
+        perror("Nie można otworzyć pliku");
+        exit(1);
+    }
+    int line = 1;
+    int value;
+
+    while (fscanf(fp, "%d", &value) == 1) {
+        if (fgetc(fp) == '\n') {
+            line++;
+        }
+    }
+
+    fclose(fp);
+    return line;
+}
+
 
 /*function reads the line and returns an array*/
 int* readLine(const char *filename, int targetLine, int expectedCount) {
