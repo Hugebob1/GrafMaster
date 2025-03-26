@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
 
     // Inicjalizacja zmiennych
     char binaryname[64] = "graph_original.bin";
-    char tekstowy[64] = "graph";
+    char tekstowy[64] = "graph.txt";
     int numParts = 2;  // Domyślna wartość numParts
     float maxDiff = 99.0f;  // Domyślna wartość maxDiff
     int opt;
@@ -74,18 +74,42 @@ int main(int argc, char **argv) {
     // Tworzenie podgrafów
     GraphChunk* subgraphs = splitGraphBalancedConnected(graph, numParts, maxDiff);
 
-    // Eksportowanie podgrafów do plików
     if (subgraphs) {
+        char baseTekstowy[64];
+        char baseBinaryname[64];
+
+        // Rozdzielenie nazwy pliku i rozszerzenia dla tekstowego
+        char* dotTxt = strrchr(tekstowy, '.');
+        if (dotTxt) {
+            strncpy(baseTekstowy, tekstowy, dotTxt - tekstowy);
+            baseTekstowy[dotTxt - tekstowy] = '\0';
+        } else {
+            strcpy(baseTekstowy, tekstowy);
+        }
+
+        // Rozdzielenie nazwy pliku i rozszerzenia dla binarnego
+        char* dotBin = strrchr(binaryname, '.');
+        if (dotBin) {
+            strncpy(baseBinaryname, binaryname, dotBin - binaryname);
+            baseBinaryname[dotBin - binaryname] = '\0';
+        } else {
+            strcpy(baseBinaryname, binaryname);
+        }
+
         for (int i = 0; i < numParts; i++) {
             char filename[64];
-            // Tworzymy nazwę pliku na podstawie zmiennej tekstowy i numeru podgrafu
-            sprintf(filename, "%s_%d.txt", tekstowy, i);
+            char biname[64];
+
+            // Tworzymy nazwę pliku na podstawie nazwy bazowej i numeru podgrafu
+            sprintf(filename, "%s%d%s", baseTekstowy, i, dotTxt ? dotTxt : ".txt");
             exportGraph(subgraphs[i], filename);
+
+            sprintf(biname, "%s%d%s", baseBinaryname, i, dotBin ? dotBin : "");
+            saveGraphBinaryCompact(subgraphs[i], biname);
         }
     }
 
-    // Zapisanie grafu w formacie binarnym
-    saveGraphBinaryCompact(graph, binaryname);
+
 
     // Zwalnianie pamięci
     freeGraphChunk(graph);
