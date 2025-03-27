@@ -5,13 +5,40 @@
 #include <string.h>
 #include <stdio.h>
 
+long getFileSize(const char* filename) {
+    FILE* file = fopen(filename, "rb");
+    if (!file) {
+        perror("Nie mozna otworzyc pliku");
+        return -1;
+    }
+
+    fseek(file, 0, SEEK_END);       // Przeskocz na koniec pliku
+    long size = ftell(file);        // Pobierz pozycję wskaźnika = rozmiar
+    fclose(file);
+    return size;
+}
+
 int main(int argc, char **argv){
     clock_t start = clock();
     GraphChunk graph = addEdges(argv[1]);
+
     exportGraph(graph, "graph_original.csv");
-    //printGraphChunk(graph);   
+
+    validateGraphChunk(graph);
+
+    isGraphConnected(graph);
+
+    saveGraphBinaryCompact(graph, "graph_original.bin");
+
+    freeGraphChunk(graph); 
+
     clock_t end = clock();
     double time_spent = (double)(end - start) / CLOCKS_PER_SEC;
 
     printf("Czas dzialania: %.6f sekund\n", time_spent);
+
+    printf("Rozmiar pliku csv: %ld KB\n", getFileSize("graph_original.csv")/1024);
+    printf("Rozmiar pliku bin: %ld KB\n", getFileSize("graph_original.bin")/1024);
+
+    return 0;
 }

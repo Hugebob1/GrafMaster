@@ -33,6 +33,7 @@ typedef struct GraphChunk {
 } *GraphChunk;
 
 //struktura pliku binarnego
+// [Vertecies (unit32_t)]
 // [degree (uint8_t)] 
 // [neighbor_1 (uint16_t)]
 // [neighbor_2 (uint16_t)]
@@ -48,9 +49,10 @@ void freeGraphChunk(GraphChunk graph); //ok
 void exportGraph(GraphChunk graph, const char* filename); //ok
 
 //jutro reszta
-bool validateGraphChunk(GraphChunk graph);
-void saveGraphBinaryCompact(GraphChunk graph, const char* filename);
-GraphChunk loadGraphFromBinaryToChunk(const char* filename);
-int countVertices(GraphChunk graph);
+bool validateGraphChunk(GraphChunk graph); //ok
+void dfs(Vertex* vertices, int currentId, bool* visited, int totalVertices); //ok
+bool isGraphConnected(GraphChunk graph); //ok
+void saveGraphBinaryCompact(GraphChunk graph, const char* filename); //ok
+GraphChunk loadGraphFromBinaryToChunk(const char* filename); //ok
 
 #endif
