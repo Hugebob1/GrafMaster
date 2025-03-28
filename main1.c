@@ -30,6 +30,17 @@ int main(int argc, char **argv){
 
     saveGraphBinaryCompact(graph, "graph_original.bin");
 
+    GraphChunk* parts = splitGraphGreedyBalanced(graph, 2, 100.0f);
+
+    for(int i = 0; i < 2; i++) {
+        char filename[64];
+        sprintf(filename, "graph_part%d.csv", i);
+        exportGraph(parts[i], filename);
+    }
+
+    isGraphConnected(parts[0]);
+    isGraphConnected(parts[1]);
+
     freeGraphChunk(graph); 
 
     clock_t end = clock();

@@ -54,5 +54,7 @@ void dfs(Vertex* vertices, int currentId, bool* visited, int totalVertices); //o
 bool isGraphConnected(GraphChunk graph); //ok
 void saveGraphBinaryCompact(GraphChunk graph, const char* filename); //ok
 GraphChunk loadGraphFromBinaryToChunk(const char* filename); //ok
+int compareDegreeDesc(const void* a, const void* b);
+GraphChunk* splitGraphGreedyBalanced(GraphChunk graph, int numParts, float maxDiffPercent);
 
 #endif

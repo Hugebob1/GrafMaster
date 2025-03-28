@@ -345,3 +345,141 @@ GraphChunk loadGraphFromBinaryToChunk(const char* filename) {
     fclose(file);
     return graph;
 }
+
+static int* degreeCmpHelper = NULL;
+
+int compareDegreeDesc(const void* a, const void* b) {
+    int ia = *(const int*)a;
+    int ib = *(const int*)b;
+    return degreeCmpHelper[ib] - degreeCmpHelper[ia];
+}
+
+GraphChunk* splitGraphGreedyBalanced(GraphChunk graph, int numParts, float maxDiffPercent) {
+    int total = graph->totalVertices;
+    int* assignment = malloc(sizeof(int) * total);
+    int* partSizes = calloc(numParts, sizeof(int));
+    for (int i = 0; i < total; i++) assignment[i] = -1;
+
+    int* degrees = malloc(sizeof(int) * total);
+    int* order = malloc(sizeof(int) * total);
+    for (int i = 0; i < total; i++) {
+        order[i] = i;
+        degrees[i] = (graph->vertices[i]) ? graph->vertices[i]->degree : -1;
+    }
+    degreeCmpHelper = degrees;
+    qsort(order, total, sizeof(int), compareDegreeDesc);
+
+    int* seeds = malloc(sizeof(int) * numParts);
+    int seedCount = 0;
+    for (int i = 0; i < total && seedCount < numParts; i++) {
+        int v = order[i];
+        if (graph->vertices[v]) {
+            seeds[seedCount++] = v;
+            assignment[v] = seedCount - 1;
+            partSizes[seedCount - 1]++;
+        }
+    }
+
+    bool* assigned = calloc(total, sizeof(bool));
+    int* queues[numParts];
+    int fronts[numParts], backs[numParts];
+    for (int i = 0; i < numParts; i++) {
+        queues[i] = malloc(sizeof(int) * total);
+        fronts[i] = 0;
+        backs[i] = 0;
+        queues[i][backs[i]++] = seeds[i];
+        assigned[seeds[i]] = true;
+    }
+
+    bool updated;
+    do {
+        updated = false;
+        for (int g = 0; g < numParts; g++) {
+            int count = backs[g];
+            while (fronts[g] < count) {
+                int u = queues[g][fronts[g]++];
+                Vertex v = graph->vertices[u];
+                if (!v) continue;
+                for (int j = 0; j < v->degree; j++) {
+                    int nei = v->edges[j];
+                    if (!assigned[nei] && graph->vertices[nei]) {
+                        assignment[nei] = g;
+                        queues[g][backs[g]++] = nei;
+                        partSizes[g]++;
+                        assigned[nei] = true;
+                        updated = true;
+                    }
+                }
+            }
+        }
+    } while (updated);
+
+    for (int i = 0; i < total; i++) {
+        if (assignment[i] == -1 && graph->vertices[i]) {
+            int minIdx = 0;
+            for (int j = 1; j < numParts; j++) {
+                if (partSizes[j] < partSizes[minIdx]) minIdx = j;
+            }
+            assignment[i] = minIdx;
+            partSizes[minIdx]++;
+        }
+    }
+
+    int minSize = total, maxSize = 0;
+    for (int i = 0; i < numParts; i++) {
+        if (partSizes[i] < minSize) minSize = partSizes[i];
+        if (partSizes[i] > maxSize) maxSize = partSizes[i];
+    }
+    int baseSize = total / numParts;
+    float diff = (maxSize - minSize) / (float)baseSize * 100.0f;
+    if (diff > maxDiffPercent) {
+        printf("❌ Różnica między grupami przekracza %.2f%% (%.2f%%)\n", maxDiffPercent, diff);
+        free(assignment);
+        free(partSizes);
+        free(degrees);
+        free(order);
+        free(seeds);
+        free(assigned);
+        for (int i = 0; i < numParts; i++) free(queues[i]);
+        return NULL;
+    }
+
+    GraphChunk* parts = malloc(sizeof(GraphChunk) * numParts);
+    for (int i = 0; i < numParts; i++) {
+        parts[i] = malloc(sizeof(struct GraphChunk));
+        parts[i]->totalVertices = total;
+        parts[i]->vertices = calloc(total, sizeof(Vertex));
+    }
+
+    for (int i = 0; i < total; i++) {
+        int g = assignment[i];
+        if (g == -1 || !graph->vertices[i]) continue;
+        Vertex orig = graph->vertices[i];
+        Vertex copy = createVertex(orig->id, orig->degree);
+        copy->degree = 0;
+        parts[g]->vertices[i] = copy;
+    }
+
+    for (int i = 0; i < total; i++) {
+        int g = assignment[i];
+        if (g == -1 || !graph->vertices[i]) continue;
+        Vertex orig = graph->vertices[i];
+        Vertex copy = parts[g]->vertices[i];
+        for (int j = 0; j < orig->degree; j++) {
+            int nei = orig->edges[j];
+            if (assignment[nei] == g) {
+                copy->edges[copy->degree++] = nei;
+            }
+        }
+    }
+
+    free(assignment);
+    free(partSizes);
+    free(degrees);
+    free(order);
+    free(seeds);
+    free(assigned);
+    for (int i = 0; i < numParts; i++) free(queues[i]);
+    return parts;
+}
+
