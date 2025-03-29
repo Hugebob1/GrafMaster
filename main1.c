@@ -20,7 +20,11 @@ long getFileSize(const char* filename) {
 
 int main(int argc, char **argv){
     clock_t start = clock();
-    GraphChunk graph = addEdges(argv[1]);
+
+    //domyslna wartosc x = 0
+    int x = 0;
+
+    GraphChunk graph = addEdges(argv[1], x);
 
     exportGraph(graph, "graph_original.csv");
 

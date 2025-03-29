@@ -43,7 +43,7 @@ typedef struct GraphChunk {
 // Function prototypes
 Vertex createVertex(int id, int numEdges); //ok
 GraphChunk createGraphChunk(const char *fileName); //ok
-GraphChunk addEdges(const char *fileName); //ok
+GraphChunk addEdges(const char *fileName, int x); //ok
 void printGraphChunk(GraphChunk graph); //ok
 void freeGraphChunk(GraphChunk graph); //ok
 void exportGraph(GraphChunk graph, const char* filename); //ok

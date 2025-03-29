@@ -74,15 +74,26 @@ GraphChunk createGraphChunk(const char *fileName) {
     return graph;
 }
 
-GraphChunk addEdges(const char *fileName) {
+GraphChunk addEdges(const char *fileName, int x) {
     const int n2 = numElements(fileName, 2); // liczba wierzchołków
     const int numConnections = numElements(fileName, 4);
     const int lines = numLines(fileName);
     int graphNumber = 1;
-    if (lines > 5) {
-        printf("liczba grafow w pliku: %d\n", lines - 4);
-        printf("Ktory graf mam wczytac? (1 - %d)\n", lines - 4);
-        scanf("%d", &graphNumber);
+    if(x>0){
+        if(x<=lines-4)
+            graphNumber = x;
+        else{
+            printf("Nie ma takiego grafu w pliku\n");
+            return NULL;
+        }
+    }
+    else if (lines > 5) {
+        printf("W pliku wystepuje wiecej niz jeden graf, grafy do wyboru: ");
+        for(int i=0;i<lines-4;i++){
+            printf("%d ",i+1);
+        }
+        printf("\nProsze uruchomic program z odpowiednia flaga\n");
+        return NULL;
     }
     const int numSections = numElements(fileName, graphNumber + 4);
 
