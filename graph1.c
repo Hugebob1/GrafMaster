@@ -66,9 +66,7 @@ GraphChunk createGraphChunk(const char *fileName) {
 
     // Wypełniamy domyślnie puste wierzchołki (ID = indeks)
     for (int i = 0; i < numVertices; i++) {
-        for (int i = 0; i < numVertices; i++) {
-            graph->vertices[i] = createVertex(i, 0);  // przypisujemy wskaźnik
-        } 
+        graph->vertices[i] = createVertex(i, 0);  // przypisujemy wskaźnik
     }
 
     return graph;
@@ -79,26 +77,31 @@ GraphChunk addEdges(const char *fileName, int x) {
     const int numConnections = numElements(fileName, 4);
     const int lines = numLines(fileName);
     int graphNumber = 1;
-    if(x>0){
-        if(x<=lines-4)
+
+    if (x > 0) {
+        if (x <= lines - 4)
             graphNumber = x;
-        else{
-            printf("Nie ma takiego grafu w pliku\n");
+        else {
+            fprintf(stderr, "Nie ma takiego grafu w pliku: %s\n", fileName);
             return NULL;
         }
-    }
-    else if (lines > 5) {
-        printf("W pliku wystepuje wiecej niz jeden graf, grafy do wyboru: ");
-        for(int i=0;i<lines-4;i++){
-            printf("%d ",i+1);
+    } else if (lines > 5) {
+        fprintf(stderr, "W pliku występuje więcej niż jeden graf. Grafy do wyboru: ");
+        for (int i = 0; i < lines - 4; i++) {
+            fprintf(stderr, "%d ", i + 1);
         }
-        printf("\nProsze uruchomic program z odpowiednia flaga\n");
+        fprintf(stderr, "\nProszę uruchomić program z odpowiednią flagą -g\n");
         return NULL;
     }
-    const int numSections = numElements(fileName, graphNumber + 4);
 
+    const int numSections = numElements(fileName, graphNumber + 4);
     int *connections = readLine(fileName, 4, numConnections);
     int *sections = readLine(fileName, graphNumber + 4, numSections);
+
+    if (!connections || !sections) {
+        fprintf(stderr, "Błąd: nie udało się wczytać połączeń lub sekcji z pliku %s\n", fileName);
+        return NULL;
+    }
 
     GraphChunk graph = malloc(sizeof(struct GraphChunk));
     graph->totalVertices = n2;
@@ -110,7 +113,7 @@ GraphChunk addEdges(const char *fileName, int x) {
         graph->vertices[i]->degree = 0;
     }
 
-    // Dodawanie krawędzi
+    // Dodawanie krawędzi (sekcje główne)
     for (int i = 0; i < numSections - 1; i++) {
         int a = sections[i], b = sections[i + 1];
         int pom = a, pom1 = pom + 1;
@@ -120,6 +123,16 @@ GraphChunk addEdges(const char *fileName, int x) {
             if (u != v) {
                 Vertex vu = graph->vertices[u];
                 Vertex vv = graph->vertices[v];
+
+                if (vu->degree >= vu->numEdges) {
+                    fprintf(stderr, "Błąd krytyczny: przekroczony limit krawędzi dla wierzchołka %d\n", u);
+                    exit(EXIT_FAILURE);
+                }
+                if (vv->degree >= vv->numEdges) {
+                    fprintf(stderr, "Błąd krytyczny: przekroczony limit krawędzi dla wierzchołka %d\n", v);
+                    exit(EXIT_FAILURE);
+                }
+
                 vu->edges[vu->degree++] = v;
                 vv->edges[vv->degree++] = u;
             }
@@ -138,6 +151,16 @@ GraphChunk addEdges(const char *fileName, int x) {
         if (u != v) {
             Vertex vu = graph->vertices[u];
             Vertex vv = graph->vertices[v];
+
+            if (vu->degree >= vu->numEdges) {
+                fprintf(stderr, "Błąd krytyczny: przekroczony limit krawędzi dla wierzchołka %d\n", u);
+                exit(EXIT_FAILURE);
+            }
+            if (vv->degree >= vv->numEdges) {
+                fprintf(stderr, "Błąd krytyczny: przekroczony limit krawędzi dla wierzchołka %d\n", v);
+                exit(EXIT_FAILURE);
+            }
+
             vu->edges[vu->degree++] = v;
             vv->edges[vv->degree++] = u;
         }
