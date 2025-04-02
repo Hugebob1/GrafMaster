@@ -33,14 +33,14 @@ int main(int argc, char **argv){
     isGraphConnected(graph);
 
     saveGraphBinaryCompact(graph, "graph_original.bin");
+    int n = 23;
+    GraphChunk* parts = splitGraphGreedyBalanced(graph, n, 276.0f);
 
-    GraphChunk* parts = splitGraphGreedyBalanced(graph, 3, 86.0f);
-
-    saveSubGraphs(parts, 3, "subgraphs.txt");
-    saveSubGraphsCompactBinary(parts, 3, "subgraphs.bin");
-
-    isGraphConnected(parts[0]);
-    isGraphConnected(parts[1]);
+    saveSubGraphs(parts, n, "subgraphs.txt");
+    saveSubGraphsCompactBinary(parts, n, "subgraphs.bin");
+    for(int i=0;i<n;i++){
+        isGraphConnected(parts[i]);
+    }
 
     freeGraphChunk(graph); 
 
