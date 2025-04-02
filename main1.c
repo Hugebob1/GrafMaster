@@ -34,7 +34,7 @@ int main(int argc, char **argv){
 
     saveGraphBinaryCompact(graph, "graph_original.bin");
 
-    GraphChunk* parts = splitGraphGreedyBalanced(graph, 3, 52.0f);
+    GraphChunk* parts = splitGraphGreedyBalanced(graph, 3, 86.0f);
 
     saveSubGraphs(parts, 3, "subgraphs.txt");
     saveSubGraphsCompactBinary(parts, 3, "subgraphs.bin");
