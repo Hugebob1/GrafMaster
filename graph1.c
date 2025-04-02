@@ -444,7 +444,7 @@ GraphChunk* splitGraphGreedyBalanced(GraphChunk graph, int numParts, float maxDi
     int baseSize = total / numParts;
     float diff = (maxSize - minSize) / (float)baseSize * 100.0f;
     if (diff > maxDiffPercent) {
-        printf("❌ Różnica między grupami przekracza %.2f%% (%.2f%%)\n", maxDiffPercent, diff);
+        printf("Roznica miedzy grupami przekracza %.2f%% (%.2f%%)\n", maxDiffPercent, diff);
         free(assignment);
         free(partSizes);
         free(degrees);
