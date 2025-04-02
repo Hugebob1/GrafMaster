@@ -25,21 +25,36 @@ int main(int argc, char **argv){
     int x = 0;
     int opt;
     int numParts = 2;
+    char binaryname[100]="subgraphs.bin";
+    char tekstowy[100]="subgraphs.txt";
     float maxDiff = 10.0f;
-    while ((opt = getopt(argc, argv, "hbag:")) != -1) {
+    while ((opt = getopt(argc, argv, "hb:a:g:p:d:f")) != -1) { //a.exe graf.txt -g 1 -p 2 -d 60 (w skrócie flaga argument, flaga argument_
         switch (opt) {
             case 'h':
                 printf("Instrukcja programu\n");
             return 0;
-         /*   case 'b':
+          case 'b':
                 strcpy(binaryname, optarg);  // Przypisanie nazwy pliku binarnego
             break;
             case 'a':
                 strcpy(tekstowy, optarg);  // Przypisanie nazwy pliku tekstowego
             break;
-            */
             case 'g':
-                x = atof(argv[optind-1]);
+                if (optarg) {
+                    x = atof(optarg);
+                }
+            break;
+            case 'p':
+                if (optarg) {
+                    numParts = atof(optarg);
+                }
+            break;
+            case 'd':
+                if (optarg) {
+                    maxDiff = atof(optarg);
+                }
+            break;
+            case 'f':
                 break;
             default:
                 printf("Wpisana flaga nie istnieje\n");
@@ -54,17 +69,10 @@ int main(int argc, char **argv){
     validateGraphChunk(graph);
 
     isGraphConnected(graph);
+    GraphChunk* parts = splitGraphGreedyBalanced(graph, numParts, maxDiff);
 
-    saveGraphBinaryCompact(graph, "graph_original.bin");
-
-    GraphChunk* parts = splitGraphGreedyBalanced(graph, optind+1, optind+2);
-
-    for(int i = 0; i < 2; i++) {
-        char filename[64];
-        sprintf(filename, "graph_part%d.csv", i);
-        exportGraph(parts[i], filename);
-    }
-
+    saveSubGraphs(parts, numParts, tekstowy);
+    saveSubGraphsCompactBinary(parts,numParts, binaryname);
     isGraphConnected(parts[0]);
     isGraphConnected(parts[1]);
 
@@ -75,8 +83,8 @@ int main(int argc, char **argv){
 
     printf("Czas dzialania: %.6f sekund\n", time_spent);
 
-    printf("Rozmiar pliku csv: %ld KB\n", getFileSize("graph_original.csv")/1024);
-    printf("Rozmiar pliku bin: %ld KB\n", getFileSize("graph_original.bin")/1024);
+    printf("Rozmiar pliku csv: %ld KB\n", getFileSize(tekstowy)/1024);
+    printf("Rozmiar pliku bin: %ld KB\n", getFileSize(binaryname)/1024);
 
     return 0;
 }
