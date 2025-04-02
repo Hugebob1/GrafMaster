@@ -198,6 +198,71 @@ void exportGraph(GraphChunk graph, const char* filename) {
     printf("Graf zapisany do pliku: %s\n", filename);
 }
 
+void saveSubGraphs(GraphChunk* subgraphs, int numParts, const char* filename) {
+    FILE* file = fopen(filename, "w");
+    if (!file) {
+        perror("Nie mozna otworzyc pliku do zapisu");
+        return;
+    }
+
+    for (int i = 0; i < numParts; i++) {
+        fprintf(file, "#%d\n", i + 1);
+
+        for (int j = 0; j < subgraphs[i]->totalVertices; j++) {
+            Vertex v = subgraphs[i]->vertices[j];
+            if (!v || v->degree == 0) continue;
+
+            fprintf(file, "%d:", v->id);
+            for (int k = 0; k < v->degree; k++) {
+                fprintf(file, " %d", v->edges[k]);
+            }
+            fprintf(file, "\n");
+        }
+    }
+
+    fclose(file);
+    printf("Grafy zapisane do pliku: %s\n", filename);
+}
+
+void saveSubGraphsCompactBinary(GraphChunk* subgraphs, uint8_t numParts, const char* filename) {
+    FILE* file = fopen(filename, "wb");
+    if (!file) {
+        perror("Nie można otworzyć pliku do zapisu");
+        return;
+    }
+
+    // Zapisz liczbę podgrafów jako 1 bajt
+    fwrite(&numParts, sizeof(uint8_t), 1, file);
+
+    for (uint8_t i = 0; i < numParts; i++) {
+        GraphChunk g = subgraphs[i];
+
+        // Policz realne wierzchołki
+        uint16_t count = 0;
+        for (int j = 0; j < g->totalVertices; j++) {
+            if (g->vertices[j]) count++;
+        }
+
+        // Zapisz liczbę wierzchołków w podgrafie
+        fwrite(&count, sizeof(uint16_t), 1, file);
+
+        for (int j = 0; j < g->totalVertices; j++) {
+            Vertex v = g->vertices[j];
+            if (!v) continue;
+
+            uint16_t id = (uint16_t)v->id;
+            uint8_t deg = (uint8_t)v->degree;
+
+            fwrite(&id, sizeof(uint16_t), 1, file);         // ID wierzchołka
+            fwrite(&deg, sizeof(uint8_t), 1, file);         // stopień
+            fwrite(v->edges, sizeof(uint16_t), deg, file);  // sąsiedzi
+        }
+    }
+
+    fclose(file);
+    printf("Grafy zapisane do pliku binarnego: %s\n", filename);
+}
+
 bool validateGraphChunk(GraphChunk graph) {
     if (!graph || !graph->vertices) {
         printf("Blad: Graf jest NULL\n");
@@ -304,7 +369,7 @@ bool isGraphConnected(GraphChunk graph) {
 void saveGraphBinaryCompact(GraphChunk graph, const char* filename) {
     FILE* file = fopen(filename, "wb");
     if (!file) {
-        perror("Nie można otworzyć pliku binarnego");
+        perror("Nie mozna otworzyc pliku binarnego");
         return;
     }
     int totalVertices = graph->totalVertices;
@@ -326,7 +391,7 @@ void saveGraphBinaryCompact(GraphChunk graph, const char* filename) {
 GraphChunk loadGraphFromBinaryToChunk(const char* filename) {
     FILE* file = fopen(filename, "rb");
     if (!file) {
-        perror("Nie można otworzyć pliku binarnego do odczytu");
+        perror("Nie mozna otworzyc pliku binarnego do odczytu");
         return NULL;
     }
 
@@ -493,4 +558,3 @@ GraphChunk* splitGraphGreedyBalanced(GraphChunk graph, int numParts, float maxDi
     for (int i = 0; i < numParts; i++) free(queues[i]);
     return parts;
 }
-
