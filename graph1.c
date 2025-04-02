@@ -529,10 +529,26 @@ GraphChunk* splitGraphGreedyBalanced(GraphChunk graph, int numParts, float maxDi
         if (partSizes[i] < minSize) minSize = partSizes[i];
         if (partSizes[i] > maxSize) maxSize = partSizes[i];
     }
+
+    // Sprawdzenie czy jakas grupa jest logicznie pusta
+    for (int i = 0; i < numParts; i++) {
+        if (partSizes[i] == 0) {
+            fprintf(stderr, "Blad: grupa %d jest pusta - nie mozna podzielic grafu na %d spojnych czesci\n", i, numParts);
+            free(assignment);
+            free(partSizes);
+            free(degrees);
+            free(order);
+            free(seeds);
+            free(assigned);
+            for (int j = 0; j < numParts; j++) free(queues[j]);
+            return NULL;
+        }
+    }
+
     int baseSize = total / numParts;
     float diff = (maxSize - minSize) / (float)baseSize * 100.0f;
     if (diff > maxDiffPercent) {
-        printf("Roznica miedzy grupami przekracza %.2f%% (%.2f%%)\n", maxDiffPercent, diff);
+        printf("Blad: roznica wielkosci grup przekracza %.2f%% (aktualnie: %.2f%%)\n", maxDiffPercent, diff);
         free(assignment);
         free(partSizes);
         free(degrees);
@@ -572,6 +588,28 @@ GraphChunk* splitGraphGreedyBalanced(GraphChunk graph, int numParts, float maxDi
         }
     }
 
+    // Ostateczna walidacja: grupa musi zawierac przynajmniej jeden wierzcholek z krawedziami
+    for (int i = 0; i < numParts; i++) {
+        int validCount = 0;
+        for (int j = 0; j < total; j++) {
+            Vertex v = parts[i]->vertices[j];
+            if (v && v->degree > 0) {
+                validCount++;
+                break;
+            }
+        }
+        if (validCount == 0) {
+            fprintf(stderr, "Nie udalo sie podzielic grafu\n");
+            for (int k = 0; k < numParts; k++) {
+                for (int j = 0; j < total; j++) free(parts[k]->vertices[j]);
+                free(parts[k]->vertices);
+                free(parts[k]);
+            }
+            free(parts);
+            return NULL;
+        }
+    }
+
     free(assignment);
     free(partSizes);
     free(degrees);
@@ -579,5 +617,6 @@ GraphChunk* splitGraphGreedyBalanced(GraphChunk graph, int numParts, float maxDi
     free(seeds);
     free(assigned);
     for (int i = 0; i < numParts; i++) free(queues[i]);
+
     return parts;
 }

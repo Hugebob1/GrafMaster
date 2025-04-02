@@ -34,13 +34,10 @@ int main(int argc, char **argv){
 
     saveGraphBinaryCompact(graph, "graph_original.bin");
 
-    GraphChunk* parts = splitGraphGreedyBalanced(graph, 2, 100.0f);
+    GraphChunk* parts = splitGraphGreedyBalanced(graph, 3, 86.0f);
 
-    for(int i = 0; i < 2; i++) {
-        char filename[64];
-        sprintf(filename, "graph_part%d.csv", i);
-        exportGraph(parts[i], filename);
-    }
+    saveSubGraphs(parts, 3, "subgraphs.txt");
+    saveSubGraphsCompactBinary(parts, 3, "subgraphs.bin");
 
     isGraphConnected(parts[0]);
     isGraphConnected(parts[1]);
@@ -52,8 +49,8 @@ int main(int argc, char **argv){
 
     printf("Czas dzialania: %.6f sekund\n", time_spent);
 
-    printf("Rozmiar pliku csv: %ld KB\n", getFileSize("graph_original.csv")/1024);
-    printf("Rozmiar pliku bin: %ld KB\n", getFileSize("graph_original.bin")/1024);
+    printf("Rozmiar pliku csv: %ld KB\n", getFileSize("subgraphs.txt")/1024);
+    printf("Rozmiar pliku bin: %ld KB\n", getFileSize("subgraphs.bin")/1024);
 
     return 0;
 }
