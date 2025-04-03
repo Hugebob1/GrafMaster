@@ -18,7 +18,8 @@ Vertex createVertex(int id, int numEdges) {
     v->edgeDelta = 0;
     v->degree = numEdges;   // jeśli chcesz osobno sterować – możesz zmienić
     v->active = 1;
-
+    v->x = -1; // initial value
+    v->y = -1; // initial value
     return v;
 }
 
@@ -74,6 +75,7 @@ GraphChunk createGraphChunk(const char *fileName) {
 
 GraphChunk addEdges(const char *fileName, int x) {
     const int n2 = numElements(fileName, 2); // liczba wierzchołków
+    const int n3 = numElements(fileName, 3); // liczba czegos tam
     const int numConnections = numElements(fileName, 4);
     const int lines = numLines(fileName);
     int graphNumber = 1;
@@ -90,16 +92,18 @@ GraphChunk addEdges(const char *fileName, int x) {
         for (int i = 0; i < lines - 4; i++) {
             fprintf(stderr, "%d ", i + 1);
         }
-        fprintf(stderr, "\nProszę uruchomić program z odpowiednią flagą -g\n");
+        fprintf(stderr, "\nProsze uruchomic program z odpowiednia flaga -g\n");
         return NULL;
     }
 
     const int numSections = numElements(fileName, graphNumber + 4);
     int *connections = readLine(fileName, 4, numConnections);
     int *sections = readLine(fileName, graphNumber + 4, numSections);
+    int *line2 = readLine(fileName, 2, n2);
+    int *line3 = readLine(fileName, 3, n2);
 
     if (!connections || !sections) {
-        fprintf(stderr, "Błąd: nie udało się wczytać połączeń lub sekcji z pliku %s\n", fileName);
+        fprintf(stderr, "Blad: nie udalo się wczytac polaczen lub sekcji z pliku %s\n", fileName);
         return NULL;
     }
 
@@ -125,15 +129,23 @@ GraphChunk addEdges(const char *fileName, int x) {
                 Vertex vv = graph->vertices[v];
 
                 if (vu->degree >= vu->numEdges) {
-                    fprintf(stderr, "Błąd krytyczny: przekroczony limit krawędzi dla wierzchołka %d\n", u);
-                    exit(EXIT_FAILURE);
+                    vu->numEdges *= 2;
+                    vu->edges = realloc(vu->edges, vu->numEdges * sizeof(int));
+                    if (!vu->edges) {
+                        fprintf(stderr, "Blad realloc edges dla wierzcholka %d\n", vu->id);
+                        exit(EXIT_FAILURE);
+                    }
                 }
-                if (vv->degree >= vv->numEdges) {
-                    fprintf(stderr, "Błąd krytyczny: przekroczony limit krawędzi dla wierzchołka %d\n", v);
-                    exit(EXIT_FAILURE);
-                }
-
                 vu->edges[vu->degree++] = v;
+                
+                if (vv->degree >= vv->numEdges) {
+                    vv->numEdges *= 2;
+                    vv->edges = realloc(vv->edges, vv->numEdges * sizeof(int));
+                    if (!vv->edges) {
+                        fprintf(stderr, "Blad realloc edges dla wierzcholka %d\n", vv->id);
+                        exit(EXIT_FAILURE);
+                    }
+                }
                 vv->edges[vv->degree++] = u;
             }
             a++;
@@ -153,15 +165,23 @@ GraphChunk addEdges(const char *fileName, int x) {
             Vertex vv = graph->vertices[v];
 
             if (vu->degree >= vu->numEdges) {
-                fprintf(stderr, "Błąd krytyczny: przekroczony limit krawędzi dla wierzchołka %d\n", u);
-                exit(EXIT_FAILURE);
+                vu->numEdges *= 2;
+                vu->edges = realloc(vu->edges, vu->numEdges * sizeof(int));
+                if (!vu->edges) {
+                    fprintf(stderr, "Blad realloc edges dla wierzcholka %d\n", vu->id);
+                    exit(EXIT_FAILURE);
+                }
             }
-            if (vv->degree >= vv->numEdges) {
-                fprintf(stderr, "Błąd krytyczny: przekroczony limit krawędzi dla wierzchołka %d\n", v);
-                exit(EXIT_FAILURE);
-            }
-
             vu->edges[vu->degree++] = v;
+            
+            if (vv->degree >= vv->numEdges) {
+                vv->numEdges *= 2;
+                vv->edges = realloc(vv->edges, vv->numEdges * sizeof(int));
+                if (!vv->edges) {
+                    fprintf(stderr, "Blad realloc edges dla wierzcholka %d\n", vv->id);
+                    exit(EXIT_FAILURE);
+                }
+            }
             vv->edges[vv->degree++] = u;
         }
         a++;

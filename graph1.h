@@ -25,6 +25,8 @@ typedef struct Vertex {
     int edgeDelta;
     int degree;
     int active;
+    int x;
+    int y;
 } *Vertex;
 
 typedef struct GraphChunk {
