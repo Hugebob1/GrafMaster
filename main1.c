@@ -56,7 +56,7 @@ int main(int argc, char **argv){
     isGraphConnected(graph);
 
     saveGraphBinaryCompact(graph, "graph_original.bin");
-    int n = 10;
+    int n = 2;
     GraphChunk* parts = splitGraphGreedyBalanced(graph, n, 276.0f);
 
     saveSubGraphs(parts, n, "subgraphs.txt");
@@ -66,6 +66,12 @@ int main(int argc, char **argv){
     }
 
     freeGraphChunk(graph); 
+
+
+    int xd;
+    GraphChunk* parts1 = loadSubGraphsFromBinary("subgraphs.bin", &xd);
+    printGraphChunk(parts1[0]); // lub inny podgraf
+
 
     clock_t end = clock();
     double time_spent = (double)(end - start) / CLOCKS_PER_SEC;

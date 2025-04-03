@@ -18,8 +18,8 @@ Vertex createVertex(int id, int numEdges) {
     v->edgeDelta = 0;
     v->degree = numEdges;   // jeśli chcesz osobno sterować – możesz zmienić
     v->active = 1;
-    v->x = -1; // initial value
-    v->y = -1; // initial value
+    // v->x = -1; // initial value
+    // v->y = -1; // initial value
     return v;
 }
 
@@ -100,7 +100,7 @@ GraphChunk addEdges(const char *fileName, int x) {
     int *connections = readLine(fileName, 4, numConnections);
     int *sections = readLine(fileName, graphNumber + 4, numSections);
     int *line2 = readLine(fileName, 2, n2);
-    int *line3 = readLine(fileName, 3, n2);
+    int *line3 = readLine(fileName, 3, n3);
 
     if (!connections || !sections) {
         fprintf(stderr, "Blad: nie udalo się wczytac polaczen lub sekcji z pliku %s\n", fileName);
@@ -188,6 +188,27 @@ GraphChunk addEdges(const char *fileName, int x) {
         pom1++;
     }
 
+    int global_y = 0;
+    int pomIndex = 0;
+    if (n3 >= 2 && line3[0] == 0 && line3[1] == 0) {
+        global_y = 1;
+    }
+    for (int i = 0; i < n3 - 1; i++) {
+        int left = line3[i], right = line3[i + 1];
+        if (left == 0 && right == 0) {
+            continue;
+        }
+
+        while (left < right) {
+            graph->vertices[pomIndex]->x = line2[left];
+            graph->vertices[pomIndex]->y = global_y;
+            left++;
+            pomIndex++;
+        }
+
+        global_y += 1;
+    }
+
     free(connections);
     free(sections);
     return graph;
@@ -202,7 +223,7 @@ void printGraphChunk(GraphChunk graph) {
         for (int j = 0; j < v->degree; j++) {
             printf(" -> %d", v->edges[j]);
         }
-        printf("\n");
+        printf(" (%d,%d)\n", v->x, v->y);
     }
 }
 
@@ -259,7 +280,7 @@ void saveSubGraphs(GraphChunk* subgraphs, int numParts, const char* filename) {
             for (int k = 0; k < v->degree; k++) {
                 fprintf(file, " %d", v->edges[k]);
             }
-            fprintf(file, "\n");
+            fprintf(file, " (%d,%d)\n", v->x, v->y); 
         }
     }
 
@@ -270,23 +291,20 @@ void saveSubGraphs(GraphChunk* subgraphs, int numParts, const char* filename) {
 void saveSubGraphsCompactBinary(GraphChunk* subgraphs, uint8_t numParts, const char* filename) {
     FILE* file = fopen(filename, "wb");
     if (!file) {
-        perror("Nie można otworzyć pliku do zapisu");
+        perror("Nie mozna otworzyc pliku do zapisu");
         return;
     }
 
-    // Zapisz liczbę podgrafów jako 1 bajt
     fwrite(&numParts, sizeof(uint8_t), 1, file);
 
     for (uint8_t i = 0; i < numParts; i++) {
         GraphChunk g = subgraphs[i];
 
-        // Policz realne wierzchołki
         uint16_t count = 0;
         for (int j = 0; j < g->totalVertices; j++) {
             if (g->vertices[j]) count++;
         }
 
-        // Zapisz liczbę wierzchołków w podgrafie
         fwrite(&count, sizeof(uint16_t), 1, file);
 
         for (int j = 0; j < g->totalVertices; j++) {
@@ -294,17 +312,96 @@ void saveSubGraphsCompactBinary(GraphChunk* subgraphs, uint8_t numParts, const c
             if (!v) continue;
 
             uint16_t id = (uint16_t)v->id;
+            int16_t x = (int16_t)v->x;
+            int16_t y = (int16_t)v->y;
             uint8_t deg = (uint8_t)v->degree;
 
-            fwrite(&id, sizeof(uint16_t), 1, file);         // ID wierzchołka
-            fwrite(&deg, sizeof(uint8_t), 1, file);         // stopień
-            fwrite(v->edges, sizeof(uint16_t), deg, file);  // sąsiedzi
+            fwrite(&id, sizeof(uint16_t), 1, file);
+            fwrite(&x, sizeof(int16_t), 1, file);
+            fwrite(&y, sizeof(int16_t), 1, file);
+            fwrite(&deg, sizeof(uint8_t), 1, file);
+
+            for (int k = 0; k < deg; k++) {
+                uint16_t neighbor = (uint16_t)v->edges[k];
+                fwrite(&neighbor, sizeof(uint16_t), 1, file);
+            }
         }
     }
 
     fclose(file);
     printf("Grafy zapisane do pliku binarnego: %s\n", filename);
 }
+
+
+GraphChunk* loadSubGraphsFromBinary(const char* filename, int* outNumParts) {
+    FILE* file = fopen(filename, "rb");
+    if (!file) {
+        perror("Nie mozna otworzyc pliku binarnego");
+        return NULL;
+    }
+
+    uint8_t numParts;
+    fread(&numParts, sizeof(uint8_t), 1, file);
+    *outNumParts = numParts;
+
+    GraphChunk* parts = malloc(sizeof(GraphChunk) * numParts);
+
+    for (int i = 0; i < numParts; i++) {
+        uint16_t count;
+        fread(&count, sizeof(uint16_t), 1, file);
+
+        int maxId = -1;
+        long start = ftell(file);
+
+        for (int j = 0; j < count; j++) {
+            uint16_t id;
+            fread(&id, sizeof(uint16_t), 1, file);
+            fseek(file, sizeof(int16_t) * 2, SEEK_CUR); // skip x, y
+            uint8_t deg;
+            fread(&deg, sizeof(uint8_t), 1, file);
+            fseek(file, deg * sizeof(uint16_t), SEEK_CUR);
+
+            if (id > maxId) maxId = id;
+        }
+
+        fseek(file, start, SEEK_SET);
+
+        GraphChunk g = malloc(sizeof(struct GraphChunk));
+        g->totalVertices = maxId + 1;
+        g->vertices = calloc(g->totalVertices, sizeof(Vertex));
+
+        for (int j = 0; j < count; j++) {
+            uint16_t id;
+            int16_t x, y;
+            uint8_t deg;
+
+            fread(&id, sizeof(uint16_t), 1, file);
+            fread(&x, sizeof(int16_t), 1, file);
+            fread(&y, sizeof(int16_t), 1, file);
+            fread(&deg, sizeof(uint8_t), 1, file);
+
+            Vertex v = createVertex(id, deg);
+            v->x = x;
+            v->y = y;
+            v->degree = deg;
+
+            for (int d = 0; d < deg; d++) {
+                uint16_t neighbor;
+                fread(&neighbor, sizeof(uint16_t), 1, file);
+                v->edges[d] = neighbor;
+            }
+
+            g->vertices[id] = v;
+        }
+
+        parts[i] = g;
+    }
+
+    fclose(file);
+    return parts;
+}
+
+
 
 bool validateGraphChunk(GraphChunk graph) {
     if (!graph || !graph->vertices) {
@@ -550,18 +647,10 @@ GraphChunk* splitGraphGreedyBalanced(GraphChunk graph, int numParts, float maxDi
         if (partSizes[i] > maxSize) maxSize = partSizes[i];
     }
 
-    // Sprawdzenie czy jakas grupa jest logicznie pusta
     for (int i = 0; i < numParts; i++) {
         if (partSizes[i] == 0) {
             fprintf(stderr, "Blad: grupa %d jest pusta - nie mozna podzielic grafu na %d spojnych czesci\n", i, numParts);
-            free(assignment);
-            free(partSizes);
-            free(degrees);
-            free(order);
-            free(seeds);
-            free(assigned);
-            for (int j = 0; j < numParts; j++) free(queues[j]);
-            return NULL;
+            goto fail;
         }
     }
 
@@ -569,14 +658,7 @@ GraphChunk* splitGraphGreedyBalanced(GraphChunk graph, int numParts, float maxDi
     float diff = (maxSize - minSize) / (float)baseSize * 100.0f;
     if (diff > maxDiffPercent) {
         printf("Blad: roznica wielkosci grup przekracza %.2f%% (aktualnie: %.2f%%)\n", maxDiffPercent, diff);
-        free(assignment);
-        free(partSizes);
-        free(degrees);
-        free(order);
-        free(seeds);
-        free(assigned);
-        for (int i = 0; i < numParts; i++) free(queues[i]);
-        return NULL;
+        goto fail;
     }
 
     GraphChunk* parts = malloc(sizeof(GraphChunk) * numParts);
@@ -589,9 +671,15 @@ GraphChunk* splitGraphGreedyBalanced(GraphChunk graph, int numParts, float maxDi
     for (int i = 0; i < total; i++) {
         int g = assignment[i];
         if (g == -1 || !graph->vertices[i]) continue;
+
         Vertex orig = graph->vertices[i];
         Vertex copy = createVertex(orig->id, orig->degree);
         copy->degree = 0;
+
+        // 👇 KLUCZOWE: kopiowanie wspolrzednych x/y
+        copy->x = orig->x;
+        copy->y = orig->y;
+
         parts[g]->vertices[i] = copy;
     }
 
@@ -608,7 +696,6 @@ GraphChunk* splitGraphGreedyBalanced(GraphChunk graph, int numParts, float maxDi
         }
     }
 
-    // Ostateczna walidacja: grupa musi zawierac przynajmniej jeden wierzcholek z krawedziami
     for (int i = 0; i < numParts; i++) {
         int validCount = 0;
         for (int j = 0; j < total; j++) {
@@ -639,4 +726,14 @@ GraphChunk* splitGraphGreedyBalanced(GraphChunk graph, int numParts, float maxDi
     for (int i = 0; i < numParts; i++) free(queues[i]);
 
     return parts;
+
+fail:
+    free(assignment);
+    free(partSizes);
+    free(degrees);
+    free(order);
+    free(seeds);
+    free(assigned);
+    for (int i = 0; i < numParts; i++) free(queues[i]);
+    return NULL;
 }
