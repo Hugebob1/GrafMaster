@@ -57,20 +57,17 @@ int main(int argc, char **argv){
 
     saveGraphBinaryCompact(graph, "graph_original.bin");
     int n = 2;
-    GraphChunk* parts = splitGraphGreedyBalanced(graph, n, 276.0f);
+    GraphChunk* parts = splitGraphRetryIfNeeded(graph, n, 1000.0f);
 
     saveSubGraphs(parts, n, "subgraphs.txt");
     saveSubGraphsCompactBinary(parts, n, "subgraphs.bin");
-    for(int i=0;i<n;i++){
-        isGraphConnected(parts[i]);
-    }
 
     freeGraphChunk(graph); 
 
-
-    int xd;
-    GraphChunk* parts1 = loadSubGraphsFromBinary("subgraphs.bin", &xd);
-    printGraphChunk(parts1[0]); // lub inny podgraf
+    //testowalem czy wczytuje dobrze te pliki binarne
+    // int xd;
+    // GraphChunk* parts1 = loadSubGraphsFromBinary("subgraphs.bin", &xd);
+    // printGraphChunk(parts1[0]); // lub inny podgraf
 
 
     clock_t end = clock();

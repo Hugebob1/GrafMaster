@@ -61,5 +61,6 @@ GraphChunk* splitGraphGreedyBalanced(GraphChunk graph, int numParts, float maxDi
 void saveSubGraphs(GraphChunk* subgraphs, int numParts, const char* filename); //ok
 void saveSubGraphsCompactBinary(GraphChunk* subgraphs, uint8_t numParts, const char* filename); //ok
 GraphChunk* loadSubGraphsFromBinary(const char* filename, int* outNumParts);
+GraphChunk* splitGraphRetryIfNeeded(GraphChunk graph, int numParts, float maxDiffPercent);
 
 #endif
