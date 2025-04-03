@@ -486,7 +486,7 @@ bool isGraphConnected(GraphChunk graph) {
     }
 
     if (start == -1) {
-        printf("Brak aktywnych wierzcholkoww – graf pusty\n");
+        printf("Brak aktywnych wierzcholkoww graf pusty\n");
         free(visited);
         return false;
     }
@@ -497,11 +497,11 @@ bool isGraphConnected(GraphChunk graph) {
     bool connected = true;
     for (int i = 0; i < graph->totalVertices; i++) {
         if (graph->vertices[i] && graph->vertices[i]->degree > 0 && !visited[i]) {
-            printf("Wierzcholek %d nie zostal osiągniety – graf niespojny\n", i);
+            printf("Wierzcholek %d nie zostal osiągniety graf niespojny\n", i);
             connected = false;
         }
     }
-    if(connected) printf("Graf jest spojny\n");
+    //if(connected) printf("Graf jest spojny\n");
     free(visited);
     return connected;
 }
@@ -696,27 +696,6 @@ GraphChunk* splitGraphGreedyBalanced(GraphChunk graph, int numParts, float maxDi
         }
     }
 
-    for (int i = 0; i < numParts; i++) {
-        int validCount = 0;
-        for (int j = 0; j < total; j++) {
-            Vertex v = parts[i]->vertices[j];
-            if (v && v->degree > 0) {
-                validCount++;
-                break;
-            }
-        }
-        if (validCount == 0) {
-            fprintf(stderr, "Nie udalo sie podzielic grafu\n");
-            for (int k = 0; k < numParts; k++) {
-                for (int j = 0; j < total; j++) free(parts[k]->vertices[j]);
-                free(parts[k]->vertices);
-                free(parts[k]);
-            }
-            free(parts);
-            return NULL;
-        }
-    }
-
     free(assignment);
     free(partSizes);
     free(degrees);
@@ -736,4 +715,47 @@ fail:
     free(assigned);
     for (int i = 0; i < numParts; i++) free(queues[i]);
     return NULL;
+}
+
+GraphChunk* splitGraphRetryIfNeeded(GraphChunk graph, int numParts, float maxDiffPercent) {
+    GraphChunk* parts = splitGraphGreedyBalanced(graph, numParts, maxDiffPercent);
+    if (!parts) return NULL;
+
+    int total = graph->totalVertices;
+    for (int i = 0; i < numParts; i++) {
+        int validCount = 0;
+        for (int j = 0; j < total; j++) {
+            Vertex v = parts[i]->vertices[j];
+            if (v && v->degree > 0) {
+                validCount++;
+                break;
+            }
+        }
+        if (validCount == 0) {
+            //printf("Podgraf %d jest pusty, probuje podzilic najwiekszy podgraf...\n", i);
+            int maxIdx = 0, maxCount = 0;
+            for (int j = 0; j < numParts; j++) {
+                int count = 0;
+                for (int v = 0; v < parts[j]->totalVertices; v++) {
+                    if (parts[j]->vertices[v]) count++;
+                }
+                if (count > maxCount) {
+                    maxCount = count;
+                    maxIdx = j;
+                }
+            }
+            //printf("Podgraf %d bedzie podzielony na 2 czesci...\n", maxIdx);
+            GraphChunk* newParts = splitGraphGreedyBalanced(parts[maxIdx], 2, 1000.0f);
+            parts[0] = newParts[0];
+            parts[i] = newParts[1];
+        }
+    }
+    for(int i=0;i<numParts;i++){
+        if(isGraphConnected(parts[i])==false){
+
+            printf("Podzial niemozliwy\n");
+            return NULL;
+        }
+    }
+    return parts;
 }
