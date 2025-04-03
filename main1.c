@@ -56,7 +56,7 @@ int main(int argc, char **argv){
     isGraphConnected(graph);
 
     saveGraphBinaryCompact(graph, "graph_original.bin");
-    int n = 23;
+    int n = 10;
     GraphChunk* parts = splitGraphGreedyBalanced(graph, n, 276.0f);
 
     saveSubGraphs(parts, n, "subgraphs.txt");
