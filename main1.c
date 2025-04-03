@@ -4,7 +4,9 @@
 #include <getopt.h>
 #include <string.h>
 #include <stdio.h>
-
+#include "pliki.h"
+#include "split.h"
+#include "validation.h"
 long getFileSize(const char* filename) {
     FILE* file = fopen(filename, "rb");
     if (!file) {
