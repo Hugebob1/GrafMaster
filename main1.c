@@ -20,65 +20,92 @@ long getFileSize(const char* filename) {
     return size;
 }
 
-int main(int argc, char **argv){
+int main(int argc, char **argv) {
     clock_t start = clock();
 
-    //domyslna wartosc x = 0
     int x = 0;
     int opt;
     int numParts = 2;
     float maxDiff = 10.0f;
-    while ((opt = getopt(argc, argv, "hbag:")) != -1) {
+    bool forceSplit = false;
+
+    char tekstowy[100] = "subgraphs.txt";
+    char binaryname[100] = "subgraphs.bin";
+
+    while ((opt = getopt(argc, argv, "a:b:d:p:fg:h")) != -1) {
         switch (opt) {
-            case 'h':
-                printf("Instrukcja programu\n");
-            return 0;
-         /*   case 'b':
-                strcpy(binaryname, optarg);  // Przypisanie nazwy pliku binarnego
-            break;
             case 'a':
-                strcpy(tekstowy, optarg);  // Przypisanie nazwy pliku tekstowego
-            break;
-            */
-            case 'g':
-                x = atof(argv[optind-1]);
+                strcpy(tekstowy, optarg);  // nazwa pliku tekstowego
                 break;
+            case 'b':
+                strcpy(binaryname, optarg);  // nazwa pliku binarnego
+                break;
+            case 'd':
+                maxDiff = atof(optarg);  // różnica procentowa
+                break;
+            case 'p':
+                numParts = atoi(optarg);  // liczba podgrafów
+                break;
+            case 'f':
+                forceSplit = true;  // wymuszenie podziału
+                break;
+            case 'g':
+                x = atoi(optarg);  // numer grafu z pliku
+                break;
+            case 'h':
+                printf("Uzycie: ./a.out <plik> [-g numer] [-p liczba] [-d procent] [-a plik.txt] [-b plik.bin] [-f]\n");
+                return 0;
             default:
-                printf("Wpisana flaga nie istnieje\n");
-            return 1;
+                fprintf(stderr, "Nieznana flaga. Uzyj -h po pomoc.\n");
+                return 1;
         }
     }
-   // printf("%s",argv[optind-1]);
+
+    if (optind >= argc) {
+        fprintf(stderr, "Brak pliku z grafem.\n");
+        return 1;
+    }
+
     GraphChunk graph = addEdges(argv[optind], x);
-
     exportGraph(graph, "graph_original.csv");
-
     validateGraphChunk(graph);
-
     isGraphConnected(graph);
-
     saveGraphBinaryCompact(graph, "graph_original.bin");
-    int n = 2;
-    GraphChunk* parts = splitGraphRetryIfNeeded(graph, n, 1000.0f);
 
-    saveSubGraphs(parts, n, "subgraphs.txt");
-    saveSubGraphsCompactBinary(parts, n, "subgraphs.bin");
+    GraphChunk* parts = splitGraphRetryIfNeeded(graph, numParts, maxDiff);
 
-    freeGraphChunk(graph); 
+    if (parts == NULL && forceSplit) {
+        for (int i = 2; i < graph->totalVertices; i++) {
+            parts = splitGraphRetryIfNeeded(graph, i, 100000.0f);
+            if (parts != NULL) {
+                numParts = i;
+                printf("Wymuszony podzial: %d podgrafow\n", numParts);
+                break;
+            }
+        }
+    }
 
-    //testowalem czy wczytuje dobrze te pliki binarne
-    // int xd;
-    // GraphChunk* parts1 = loadSubGraphsFromBinary("subgraphs.bin", &xd);
-    // printGraphChunk(parts1[0]); // lub inny podgraf
+    if (!parts) {
+        fprintf(stderr, "Nie udalo sie podzielic grafu.\n");
+        freeGraphChunk(graph);
+        return 1;
+    }
 
+    saveSubGraphs(parts, numParts, tekstowy);
+    saveSubGraphsCompactBinary(parts, numParts, binaryname);
+
+    for (int i = 0; i < numParts; i++) {
+        freeGraphChunk(parts[i]);
+    }
+    free(parts);
+    freeGraphChunk(graph);
 
     clock_t end = clock();
     double time_spent = (double)(end - start) / CLOCKS_PER_SEC;
 
     printf("Czas dzialania: %.6f sekund\n", time_spent);
-
-    printf("Rozmiar pliku csv: %ld KB\n", getFileSize("subgraphs.txt")/1024);
-    printf("Rozmiar pliku bin: %ld KB\n", getFileSize("subgraphs.bin")/1024);
+    printf("Rozmiar pliku csv: %ld KB\n", getFileSize(tekstowy)/1024);
+    printf("Rozmiar pliku bin: %ld KB\n", getFileSize(binaryname)/1024);
 
     return 0;
 }
