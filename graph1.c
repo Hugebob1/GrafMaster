@@ -228,13 +228,16 @@ void printGraphChunk(GraphChunk graph) {
 }
 
 void freeGraphChunk(GraphChunk graph) {
-    for (int i = 0; i < graph->totalVertices; i++) {
-        free(graph->vertices[i]->edges);
-        free(graph->vertices[i]->internalEdges);
-        free(graph->vertices[i]->externalEdges);
-        free(graph->vertices[i]);
+    if (!graph) return;
+    if (graph->vertices) {
+        for (int i = 0; i < graph->totalVertices; i++) {
+            if (graph->vertices[i]) {
+                free(graph->vertices[i]->edges);
+                free(graph->vertices[i]);
+            }
+        }
+        free(graph->vertices);
     }
-    free(graph->vertices);
     free(graph);
 }
 

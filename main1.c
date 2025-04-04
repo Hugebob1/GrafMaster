@@ -67,10 +67,10 @@ int main(int argc, char **argv) {
     }
 
     GraphChunk graph = addEdges(argv[optind], x);
-    exportGraph(graph, "graph_original.csv");
+    //exportGraph(graph, "graph_original.csv");
     validateGraphChunk(graph);
     isGraphConnected(graph);
-    saveGraphBinaryCompact(graph, "graph_original.bin");
+    //saveGraphBinaryCompact(graph, "graph_original.bin");
 
     GraphChunk* parts = splitGraphRetryIfNeeded(graph, numParts, maxDiff);
 
