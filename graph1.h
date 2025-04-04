@@ -48,19 +48,5 @@ GraphChunk createGraphChunk(const char *fileName); //ok
 GraphChunk addEdges(const char *fileName, int x); //ok
 void printGraphChunk(GraphChunk graph); //ok
 void freeGraphChunk(GraphChunk graph); //ok
-void exportGraph(GraphChunk graph, const char* filename); //ok
-
-//jutro reszta
-bool validateGraphChunk(GraphChunk graph); //ok
-void dfs(Vertex* vertices, int currentId, bool* visited, int totalVertices); //ok
-bool isGraphConnected(GraphChunk graph); //ok
-void saveGraphBinaryCompact(GraphChunk graph, const char* filename); //ok
-GraphChunk loadGraphFromBinaryToChunk(const char* filename); //ok
-int compareDegreeDesc(const void* a, const void* b); //ok
-GraphChunk* splitGraphGreedyBalanced(GraphChunk graph, int numParts, float maxDiffPercent); //ok
-void saveSubGraphs(GraphChunk* subgraphs, int numParts, const char* filename); //ok
-void saveSubGraphsCompactBinary(GraphChunk* subgraphs, uint8_t numParts, const char* filename); //ok
-GraphChunk* loadSubGraphsFromBinary(const char* filename, int* outNumParts);
-GraphChunk* splitGraphRetryIfNeeded(GraphChunk graph, int numParts, float maxDiffPercent);
 
 #endif
