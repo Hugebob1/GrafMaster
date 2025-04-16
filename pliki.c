@@ -11,14 +11,14 @@ void saveSubGraphs(GraphChunk* subgraphs, int numParts, const char* filename) {
 
         for (int j = 0; j < subgraphs[i]->totalVertices; j++) {
             Vertex v = subgraphs[i]->vertices[j];
-            if (!v || v->degree == 0) continue;
-
+            if (!v) continue;  // tylko pomijaj NULL-e, nie puste
+        
             fprintf(file, "%d:", v->id);
             for (int k = 0; k < v->degree; k++) {
                 fprintf(file, " %d", v->edges[k]);
             }
             fprintf(file, " (%d,%d)\n", v->x, v->y); 
-        }
+        }        
     }
 
     fclose(file);

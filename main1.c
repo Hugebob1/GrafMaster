@@ -73,24 +73,29 @@ int main(int argc, char **argv) {
     //saveGraphBinaryCompact(graph, "graph_original.bin");
 
     GraphChunk* parts = splitGraphRetryIfNeeded(graph, numParts, maxDiff);
-
-    if (parts == NULL && forceSplit) {
+    int resault = balanceSubGraphs(graph, parts, numParts, maxDiff, forceSplit);
+    bool czyweszlo = false;
+    if ((parts == NULL && forceSplit) || (resault == -1 && forceSplit)) {
         for (int i = 2; i < graph->totalVertices; i++) {
             parts = splitGraphRetryIfNeeded(graph, i, 100000.0f);
             if (parts != NULL) {
                 numParts = i;
                 printf("Wymuszony podzial: %d podgrafow\n", numParts);
+                czyweszlo = true;
+                getFinalDiff(parts, numParts, graph->totalVertices);
                 break;
             }
         }
     }
 
-    if (!parts) {
+    if (!parts || resault == -1) {
         fprintf(stderr, "Nie udalo sie podzielic grafu.\n");
         freeGraphChunk(graph);
         return 1;
     }
-
+    if(!czyweszlo){
+        getFinalDiff(parts, numParts, graph->totalVertices);
+    }
     saveSubGraphs(parts, numParts, tekstowy);
     saveSubGraphsCompactBinary(parts, numParts, binaryname);
 

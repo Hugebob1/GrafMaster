@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "time.h": "c",
-        "string.h": "c"
+        "string.h": "c",
+        "validation.h": "c"
     }
 }

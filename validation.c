@@ -54,6 +54,11 @@ void dfs(Vertex* vertices, int currentId, bool* visited, int totalVertices) {
 
     for (int i = 0; i < v->degree; i++) {
         int neighborId = v->edges[i];
+
+        // Bezpieczne sprawdzenie indeksu sąsiada
+        if (neighborId < 0 || neighborId >= totalVertices) continue;
+        if (!vertices[neighborId]) continue;
+
         if (!visited[neighborId]) {
             dfs(vertices, neighborId, visited, totalVertices);
         }
@@ -62,19 +67,20 @@ void dfs(Vertex* vertices, int currentId, bool* visited, int totalVertices) {
 
 bool isGraphConnected(GraphChunk graph) {
     if (!graph || !graph->vertices) {
-        printf("Blad: graf jest NULL\n");
+        //printf("Blad: graf jest NULL\n");
         return false;
     }
 
-    bool* visited = calloc(graph->totalVertices, sizeof(bool));
+    int totalVertices = graph->totalVertices;
+    bool* visited = calloc(totalVertices, sizeof(bool));
     if (!visited) {
         perror("calloc failed");
-        exit(2137);
+        return false;
     }
 
-    // Szukamy pierwszego niepustego wierzchołka
+    // Znajdź pierwszy aktywny wierzchołek
     int start = -1;
-    for (int i = 0; i < graph->totalVertices; i++) {
+    for (int i = 0; i < totalVertices; i++) {
         if (graph->vertices[i] && graph->vertices[i]->degree > 0) {
             start = i;
             break;
@@ -82,22 +88,22 @@ bool isGraphConnected(GraphChunk graph) {
     }
 
     if (start == -1) {
-        printf("Brak aktywnych wierzcholkoww graf pusty\n");
+        //printf("Brak aktywnych wierzcholkow — graf pusty lub bez krawędzi\n");
         free(visited);
         return false;
     }
 
-    dfs(graph->vertices, start, visited, graph->totalVertices);
+    dfs(graph->vertices, start, visited, totalVertices);
 
-    // Sprawdzamy czy wszystkie niepuste wierzchołki zostały odwiedzone
-    bool connected = true;
-    for (int i = 0; i < graph->totalVertices; i++) {
+    // Sprawdź, czy wszystkie aktywne wierzchołki zostały odwiedzone
+    for (int i = 0; i < totalVertices; i++) {
         if (graph->vertices[i] && graph->vertices[i]->degree > 0 && !visited[i]) {
-            printf("Wierzcholek %d nie zostal osiągniety graf niespojny\n", i);
-            connected = false;
+            //printf("Wierzcholek %d nie zostal osiagniety graf niespojny\n", i);
+            free(visited);
+            return false;
         }
     }
-    //if(connected) printf("Graf jest spojny\n");
+
     free(visited);
-    return connected;
+    return true;
 }
