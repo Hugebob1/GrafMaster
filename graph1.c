@@ -1,5 +1,6 @@
 #include "graph1.h"
 #include "utils.h"
+#include "validation.h"
 
 Vertex createVertex(int id, int numEdges) {
     Vertex v = malloc(sizeof(struct Vertex));
@@ -74,12 +75,16 @@ GraphChunk createGraphChunk(const char *fileName) {
 }
 
 GraphChunk addEdges(const char *fileName, int x) {
+    FILE *in = fopen(fileName, "r");
+    int vertecies;
+    fscanf(in, "%d", &vertecies);
+    fclose(in);
     const int n2 = numElements(fileName, 2); // liczba wierzchołków
     const int n3 = numElements(fileName, 3); // liczba czegos tam
     const int numConnections = numElements(fileName, 4);
     const int lines = numLines(fileName);
     int graphNumber = 1;
-
+    
     if (x > 0) {
         if (x <= lines - 4)
             graphNumber = x;
@@ -101,7 +106,7 @@ GraphChunk addEdges(const char *fileName, int x) {
     int *sections = readLine(fileName, graphNumber + 4, numSections);
     int *line2 = readLine(fileName, 2, n2);
     int *line3 = readLine(fileName, 3, n3);
-
+    validatefile(vertecies, line2, n2, line3, n3, connections, numConnections, sections, numSections);
     if (!connections || !sections) {
         fprintf(stderr, "Blad: nie udalo się wczytac polaczen lub sekcji z pliku %s\n", fileName);
         return NULL;

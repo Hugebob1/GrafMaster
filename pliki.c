@@ -31,8 +31,16 @@ void saveSubGraphsCompactBinary(GraphChunk* subgraphs, uint8_t numParts, const c
         return;
     }
 
-    fwrite(&numParts, sizeof(uint8_t), 1, file);
+    // --- NAGŁÓWEK ---
+    char signature[4] = {'S', 'U', 'B', 'G'}; // sygnatura pliku
+    uint8_t version = 1;                     // wersja formatu
 
+    fwrite(signature, sizeof(char), 4, file);  // zapisujemy sygnature
+    fwrite(&version, sizeof(uint8_t), 1, file); // zapisujemy wersje
+    fwrite(&numParts, sizeof(uint8_t), 1, file); // zapisujemy liczbe podgrafow
+    // --- KONIEC NAGŁÓWKA ---
+
+    // --- DANE GRAFÓW ---
     for (uint8_t i = 0; i < numParts; i++) {
         GraphChunk g = subgraphs[i];
 

@@ -67,13 +67,16 @@ int main(int argc, char **argv) {
     }
 
     GraphChunk graph = addEdges(argv[optind], x);
-    //exportGraph(graph, "graph_original.csv");
     validateGraphChunk(graph);
-    isGraphConnected(graph);
-    //saveGraphBinaryCompact(graph, "graph_original.bin");
-
+    if(!isGraphConnected(graph)){
+        fprintf(stderr ,"Bledny zapis grafu w pliku wejsciowm\n");
+        return 2;
+    }
+    int resault = -100;
     GraphChunk* parts = splitGraphRetryIfNeeded(graph, numParts, maxDiff);
-    int resault = balanceSubGraphs(graph, parts, numParts, maxDiff, forceSplit);
+    if(numParts<=2 &&  getFinalDiffvalue(parts, numParts, graph->totalVertices) > maxDiff && !forceSplit){
+        resault = balanceSubGraphsTurbo(graph, parts, numParts, maxDiff, forceSplit);
+    }
     bool czyweszlo = false;
     if ((parts == NULL && forceSplit) || (resault == -1 && forceSplit)) {
         for (int i = 2; i < graph->totalVertices; i++) {
@@ -88,7 +91,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    if (!parts || resault == -1) {
+    if (!parts || resault == -1 || getFinalDiffvalue(parts, numParts, graph->totalVertices) > maxDiff) {
         fprintf(stderr, "Nie udalo sie podzielic grafu.\n");
         freeGraphChunk(graph);
         return 1;
@@ -109,8 +112,8 @@ int main(int argc, char **argv) {
     double time_spent = (double)(end - start) / CLOCKS_PER_SEC;
 
     printf("Czas dzialania: %.6f sekund\n", time_spent);
-    printf("Rozmiar pliku csv: %ld KB\n", getFileSize(tekstowy)/1024);
-    printf("Rozmiar pliku bin: %ld KB\n", getFileSize(binaryname)/1024);
+    printf("Rozmiar pliku txt: %ld B\n", getFileSize(tekstowy));
+    printf("Rozmiar pliku bin: %ld B\n", getFileSize(binaryname));
 
     return 0;
 }

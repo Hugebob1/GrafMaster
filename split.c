@@ -212,6 +212,24 @@ void getFinalDiff(GraphChunk *parts, int numParts, int total) {
     printf("Roznica wierzcholkow: %.2f%%\n", diff);
 }
 
+float getFinalDiffvalue(GraphChunk *parts, int numParts, int total) {
+    int minSize = total, maxSize = 0;
+    int* partSizes = calloc(numParts, sizeof(int));
+    for (int i = 0; i < numParts; i++) {
+        for (int j = 0; j < total; j++) {
+            if (parts[i]->vertices[j]) partSizes[i]++;
+        }
+    }
+
+    for (int i = 0; i < numParts; i++) {
+        if (partSizes[i] < minSize) minSize = partSizes[i];
+        if (partSizes[i] > maxSize) maxSize = partSizes[i];
+    }
+    float baseSize = total / (float)numParts;
+    float diff = (maxSize - minSize) / baseSize * 100.0f;
+    return diff;
+}
+
 int balanceSubGraphs(GraphChunk original, GraphChunk *parts, int numParts, float maxDiffPercent, bool force) {
     int total = original->totalVertices;
     int* partSizes = calloc(numParts, sizeof(int));
@@ -224,9 +242,11 @@ int balanceSubGraphs(GraphChunk original, GraphChunk *parts, int numParts, float
 
     int baseSize = total / numParts;
     int maxIter = total * 2; // limit bezpieczeństwa
+    int noProgress = 0;
+    int maxNoProgress = 50;  // maksymalnie 50 pustych prób
 
     for (int iter = 0; iter < maxIter; iter++) {
-        // Szukamy najbardziej niezbalansowanych par (największy i najmniejszy podgraf)
+        // Szukamy najbardziej niezbalansowanych par
         int maxIdx = 0, minIdx = 0;
         for (int i = 1; i < numParts; i++) {
             if (partSizes[i] > partSizes[maxIdx]) maxIdx = i;
@@ -236,7 +256,7 @@ int balanceSubGraphs(GraphChunk original, GraphChunk *parts, int numParts, float
         float diff = (partSizes[maxIdx] - partSizes[minIdx]) / (float)baseSize * 100.0f;
         if (diff <= maxDiffPercent) break;
 
-        // Szukamy kandydatów do przeszczepu z maxIdx
+        // Szukamy kandydata do przeniesienia
         int bestVertex = -1;
         int maxBenefit = -1;
 
@@ -245,7 +265,6 @@ int balanceSubGraphs(GraphChunk original, GraphChunk *parts, int numParts, float
             Vertex orig = original->vertices[v];
             if (!orig) continue;
 
-            // policz ilu sąsiadów ma w minIdx
             int connectedToMin = 0;
             for (int i = 0; i < orig->degree; i++) {
                 int nei = orig->edges[i];
@@ -260,30 +279,39 @@ int balanceSubGraphs(GraphChunk original, GraphChunk *parts, int numParts, float
             }
         }
 
-        if (bestVertex == -1 || maxBenefit < 2) break; // nie warto przenosić
+        if (bestVertex == -1 || maxBenefit < 1) {
+            noProgress++;
+            if (noProgress > maxNoProgress) break;
+            continue;
+        }
+        noProgress = 0; // udało się znaleźć kandydata
 
-        // Tworzymy nowy wierzchołek
         Vertex orig = original->vertices[bestVertex];
+
         bool unsafeToMove = false;
-    for (int i = 0; i < orig->degree; i++) {
-        int nei = orig->edges[i];
-        if (nei >= 0 && nei < total && parts[maxIdx]->vertices[nei]) {
-            Vertex neighbor = parts[maxIdx]->vertices[nei];
-            int otherConnections = 0;
-            for (int j = 0; j < neighbor->degree; j++) {
-                int other = neighbor->edges[j];
-                if (other != bestVertex && parts[maxIdx]->vertices[other]) {
-                    otherConnections++;
+        for (int i = 0; i < orig->degree; i++) {
+            int nei = orig->edges[i];
+            if (nei >= 0 && nei < total && parts[maxIdx]->vertices[nei]) {
+                Vertex neighbor = parts[maxIdx]->vertices[nei];
+                int otherConnections = 0;
+                for (int j = 0; j < neighbor->degree; j++) {
+                    int other = neighbor->edges[j];
+                    if (other != bestVertex && parts[maxIdx]->vertices[other]) {
+                        otherConnections++;
+                    }
+                }
+                if (otherConnections == 0) {
+                    unsafeToMove = true;
+                    break;
                 }
             }
-            if (otherConnections == 0) {
-                unsafeToMove = true;
-                break;
-            }
         }
-    }
-    if (unsafeToMove) continue;  // zrezygnuj z przeszczepu
 
+        // Ułatwiamy tylko dla dużych podziałów
+        bool allowUnsafeMove = (numParts > 5);
+        if (!allowUnsafeMove && unsafeToMove) continue;
+
+        // Tworzymy nowy wierzchołek
         Vertex newV = createVertex(orig->id, orig->degree);
         newV->x = orig->x;
         newV->y = orig->y;
@@ -333,6 +361,7 @@ int balanceSubGraphs(GraphChunk original, GraphChunk *parts, int numParts, float
         }
 
         if (!isGraphConnected(parts[maxIdx])) {
+            // Przywracamy wszystko
             parts[maxIdx]->vertices[bestVertex] = old;
             for (int i = 0; i < newV->degree; i++) {
                 int nei = newV->edges[i];
@@ -364,14 +393,201 @@ int balanceSubGraphs(GraphChunk original, GraphChunk *parts, int numParts, float
         if (partSizes[i] > maxEnd) maxEnd = partSizes[i];
     }
     float finalDiff = (maxEnd - minEnd) / (float)baseSize * 100.0f;
-    //printf("Finalna roznica rozmiarow podgrafow: %.2f%%\n", finalDiff);
-    if(finalDiff > maxDiffPercent && !force) {
-        for(int i=0;i<numParts;i++){
+
+    free(partSizes);
+
+    if (finalDiff > maxDiffPercent && !force) {
+        for (int i = 0; i < numParts; i++) {
             freeGraphChunk(parts[i]);
         }
         return -1;
     } else {
         return 1;
     }
+}
+int balanceSubGraphsTurbo(GraphChunk original, GraphChunk *parts, int numParts, float maxDiffPercent, bool force) {
+    int total = original->totalVertices;
+    int* partSizes = calloc(numParts, sizeof(int));
+
+    for (int i = 0; i < numParts; i++) {
+        for (int j = 0; j < total; j++) {
+            if (parts[i]->vertices[j]) partSizes[i]++;
+        }
+    }
+
+    int baseSize = total / numParts;
+    int maxIter = total * 3;  // więcej prób niż normalnie
+    int noProgress = 0;
+    int maxNoProgress = 100;  // więcej tolerancji
+
+    for (int iter = 0; iter < maxIter; iter++) {
+        int maxIdx = 0, minIdx = 0;
+        for (int i = 1; i < numParts; i++) {
+            if (partSizes[i] > partSizes[maxIdx]) maxIdx = i;
+            if (partSizes[i] < partSizes[minIdx]) minIdx = i;
+        }
+
+        float diff = (partSizes[maxIdx] - partSizes[minIdx]) / (float)baseSize * 100.0f;
+        if (diff <= maxDiffPercent) break;
+
+        // Szukamy grupki kandydatów
+        int* candidates = calloc(total, sizeof(int));
+        int candidateCount = 0;
+
+        for (int v = 0; v < total; v++) {
+            if (!parts[maxIdx]->vertices[v]) continue;
+            Vertex orig = original->vertices[v];
+            if (!orig) continue;
+
+            int connectedToMin = 0;
+            for (int i = 0; i < orig->degree; i++) {
+                int nei = orig->edges[i];
+                if (nei >= 0 && nei < total && parts[minIdx]->vertices[nei]) {
+                    connectedToMin++;
+                }
+            }
+            if (connectedToMin >= 1) {
+                candidates[candidateCount++] = v;
+            }
+            if (candidateCount >= 5) break; // maks 5 kandydatów naraz
+        }
+
+        if (candidateCount == 0) {
+            free(candidates);
+            noProgress++;
+            if (noProgress > maxNoProgress) break;
+            continue;
+        }
+        noProgress = 0;
+
+        int moved = 0;
+        for (int c = 0; c < candidateCount; c++) {
+            int bestVertex = candidates[c];
+            Vertex orig = original->vertices[bestVertex];
+
+            // Sprawdzamy czy bezpiecznie usunąć
+            bool unsafeToMove = false;
+            for (int i = 0; i < orig->degree; i++) {
+                int nei = orig->edges[i];
+                if (nei >= 0 && nei < total && parts[maxIdx]->vertices[nei]) {
+                    Vertex neighbor = parts[maxIdx]->vertices[nei];
+                    int otherConnections = 0;
+                    for (int j = 0; j < neighbor->degree; j++) {
+                        int other = neighbor->edges[j];
+                        if (other != bestVertex && parts[maxIdx]->vertices[other]) {
+                            otherConnections++;
+                        }
+                    }
+                    if (otherConnections == 0) {
+                        unsafeToMove = true;
+                        break;
+                    }
+                }
+            }
+
+            bool allowUnsafeMove = (numParts > 5);
+            if (!allowUnsafeMove && unsafeToMove) continue;
+
+            // Tworzymy nowy wierzchołek
+            Vertex newV = createVertex(orig->id, orig->degree);
+            newV->x = orig->x;
+            newV->y = orig->y;
+            newV->degree = 0;
+
+            for (int i = 0; i < orig->degree; i++) {
+                int nei = orig->edges[i];
+                if (nei >= 0 && nei < total && parts[minIdx]->vertices[nei]) {
+                    newV->edges[newV->degree++] = nei;
+                    Vertex neighbor = parts[minIdx]->vertices[nei];
+                    bool alreadyConnected = false;
+                    for (int c = 0; c < neighbor->degree; c++) {
+                        if (neighbor->edges[c] == bestVertex) {
+                            alreadyConnected = true;
+                            break;
+                        }
+                    }
+                    if (!alreadyConnected) {
+                        if (neighbor->degree >= neighbor->numEdges) {
+                            neighbor->numEdges *= 2;
+                            neighbor->edges = realloc(neighbor->edges, neighbor->numEdges * sizeof(int));
+                        }
+                        neighbor->edges[neighbor->degree++] = bestVertex;
+                    }
+                }
+            }
+
+            if (newV->degree == 0) {
+                free(newV->edges);
+                free(newV);
+                continue;
+            }
+
+            Vertex old = parts[maxIdx]->vertices[bestVertex];
+            parts[maxIdx]->vertices[bestVertex] = NULL;
+            for (int i = 0; i < old->degree; i++) {
+                int nei = old->edges[i];
+                Vertex neighbor = parts[maxIdx]->vertices[nei];
+                if (neighbor) {
+                    for (int j = 0; j < neighbor->degree; j++) {
+                        if (neighbor->edges[j] == bestVertex) {
+                            neighbor->edges[j] = neighbor->edges[--neighbor->degree];
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!isGraphConnected(parts[maxIdx])) {
+                // Przywróć
+                parts[maxIdx]->vertices[bestVertex] = old;
+                for (int i = 0; i < newV->degree; i++) {
+                    int nei = newV->edges[i];
+                    Vertex neighbor = parts[minIdx]->vertices[nei];
+                    if (neighbor) {
+                        for (int j = 0; j < neighbor->degree; j++) {
+                            if (neighbor->edges[j] == bestVertex) {
+                                neighbor->edges[j] = neighbor->edges[--neighbor->degree];
+                                break;
+                            }
+                        }
+                    }
+                }
+                free(newV->edges);
+                free(newV);
+                continue;
+            }
+
+            free(old->edges);
+            free(old);
+            parts[minIdx]->vertices[bestVertex] = newV;
+            partSizes[minIdx]++;
+            partSizes[maxIdx]--;
+            moved++;
+        }
+
+        free(candidates);
+
+        if (moved == 0) {
+            noProgress++;
+            if (noProgress > maxNoProgress) break;
+        }
+    }
+
+    int minEnd = total, maxEnd = 0;
+    for (int i = 0; i < numParts; i++) {
+        if (partSizes[i] < minEnd) minEnd = partSizes[i];
+        if (partSizes[i] > maxEnd) maxEnd = partSizes[i];
+    }
+    float finalDiff = (maxEnd - minEnd) / (float)baseSize * 100.0f;
+
     free(partSizes);
+
+    if (finalDiff > maxDiffPercent && !force) {
+        for (int i = 0; i < numParts; i++) {
+            freeGraphChunk(parts[i]);
+        }
+        return -1;
+    } else {
+        return 1;
+    }
 }
