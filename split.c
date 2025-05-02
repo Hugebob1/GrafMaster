@@ -1,6 +1,8 @@
 #include "split.h"
 static int* degreeCmpHelper = NULL;
 
+#define GRAPH_CONNECTED 0
+
 int compareDegreeDesc(const void* a, const void* b) {
     int ia = *(const int*)a;
     int ib = *(const int*)b;
@@ -186,7 +188,7 @@ GraphChunk* splitGraphRetryIfNeeded(GraphChunk graph, int numParts, float maxDif
         }
     }
     for(int i=0;i<numParts;i++){
-        if(isGraphConnected(parts[i])==false){
+        if(isGraphConnected(parts[i])!=GRAPH_CONNECTED){
 
             printf("Podzial niemozliwy\n");
             return NULL;
@@ -360,7 +362,7 @@ int balanceSubGraphs(GraphChunk original, GraphChunk *parts, int numParts, float
             }
         }
 
-        if (!isGraphConnected(parts[maxIdx])) {
+        if (isGraphConnected(parts[maxIdx])!= GRAPH_CONNECTED) {
             // Przywracamy wszystko
             parts[maxIdx]->vertices[bestVertex] = old;
             for (int i = 0; i < newV->degree; i++) {
@@ -537,7 +539,7 @@ int balanceSubGraphsTurbo(GraphChunk original, GraphChunk *parts, int numParts, 
                 }
             }
 
-            if (!isGraphConnected(parts[maxIdx])) {
+            if (isGraphConnected(parts[maxIdx])!= GRAPH_CONNECTED) {
                 // Przywróć
                 parts[maxIdx]->vertices[bestVertex] = old;
                 for (int i = 0; i < newV->degree; i++) {

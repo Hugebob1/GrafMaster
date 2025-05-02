@@ -2,6 +2,9 @@
 #include "utils.h"
 #include "validation.h"
 
+int lastgrapherror = 0;
+int edgesErrors = 0;
+
 Vertex createVertex(int id, int numEdges) {
     Vertex v = malloc(sizeof(struct Vertex));
     if (!v) {
@@ -74,6 +77,16 @@ GraphChunk createGraphChunk(const char *fileName) {
     return graph;
 }
 
+#define VALIDATION_SUCCESS 0
+#define ERR_FILE_OPEN_FAILED          50
+#define ERR_NO_SUCH_GRAPH             51
+#define ERR_MULTIPLE_GRAPHS_NO_CHOICE 52
+#define ERR_GRAPH_VALIDATION_FAILED   53
+#define ERR_CONNECTIONS_NULL          54
+#define ERR_SECTIONS_NULL             55
+#define ERR_VERTEX_REALLOC_FAILED     56
+
+
 GraphChunk addEdges(const char *fileName, int x) {
     FILE *in = fopen(fileName, "r");
     int vertecies;
@@ -90,6 +103,7 @@ GraphChunk addEdges(const char *fileName, int x) {
             graphNumber = x;
         else {
             fprintf(stderr, "Nie ma takiego grafu w pliku: %s\n", fileName);
+            edgesErrors = ERR_NO_SUCH_GRAPH;
             return NULL;
         }
     } else if (lines > 5) {
@@ -98,6 +112,7 @@ GraphChunk addEdges(const char *fileName, int x) {
             fprintf(stderr, "%d ", i + 1);
         }
         fprintf(stderr, "\nProsze uruchomic program z odpowiednia flaga -g\n");
+        edgesErrors = ERR_MULTIPLE_GRAPHS_NO_CHOICE;
         return NULL;
     }
 
@@ -106,9 +121,14 @@ GraphChunk addEdges(const char *fileName, int x) {
     int *sections = readLine(fileName, graphNumber + 4, numSections);
     int *line2 = readLine(fileName, 2, n2);
     int *line3 = readLine(fileName, 3, n3);
-    validatefile(vertecies, line2, n2, line3, n3, connections, numConnections, sections, numSections);
+    int status = validatefile(vertecies, line2, n2, line3, n3, connections, numConnections, sections, numSections);
+    if (status != VALIDATION_SUCCESS) {
+        lastgrapherror = status;
+        return NULL;  // lub zareaguj inaczej
+    }
     if (!connections || !sections) {
         fprintf(stderr, "Blad: nie udalo się wczytac polaczen lub sekcji z pliku %s\n", fileName);
+        edgesErrors = ERR_CONNECTIONS_NULL;
         return NULL;
     }
 
@@ -138,6 +158,7 @@ GraphChunk addEdges(const char *fileName, int x) {
                     vu->edges = realloc(vu->edges, vu->numEdges * sizeof(int));
                     if (!vu->edges) {
                         fprintf(stderr, "Blad realloc edges dla wierzcholka %d\n", vu->id);
+                        edgesErrors = ERR_VERTEX_REALLOC_FAILED;
                         exit(EXIT_FAILURE);
                     }
                 }
@@ -148,6 +169,7 @@ GraphChunk addEdges(const char *fileName, int x) {
                     vv->edges = realloc(vv->edges, vv->numEdges * sizeof(int));
                     if (!vv->edges) {
                         fprintf(stderr, "Blad realloc edges dla wierzcholka %d\n", vv->id);
+                        edgesErrors = ERR_VERTEX_REALLOC_FAILED;
                         exit(EXIT_FAILURE);
                     }
                 }
@@ -174,6 +196,7 @@ GraphChunk addEdges(const char *fileName, int x) {
                 vu->edges = realloc(vu->edges, vu->numEdges * sizeof(int));
                 if (!vu->edges) {
                     fprintf(stderr, "Blad realloc edges dla wierzcholka %d\n", vu->id);
+                    edgesErrors = ERR_VERTEX_REALLOC_FAILED;
                     exit(EXIT_FAILURE);
                 }
             }
@@ -184,6 +207,7 @@ GraphChunk addEdges(const char *fileName, int x) {
                 vv->edges = realloc(vv->edges, vv->numEdges * sizeof(int));
                 if (!vv->edges) {
                     fprintf(stderr, "Blad realloc edges dla wierzcholka %d\n", vv->id);
+                    edgesErrors = ERR_VERTEX_REALLOC_FAILED;
                     exit(EXIT_FAILURE);
                 }
             }

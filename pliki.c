@@ -1,9 +1,12 @@
 #include "pliki.h" //czyli wszystko zwiazane z zapisywaniem/wypisywaniem/wczytywaniem
-void saveSubGraphs(GraphChunk* subgraphs, int numParts, const char* filename) {
+// Kody błędów (jeśli jeszcze nie ma)
+#define ERR_SAVE_FILE_OPEN 5
+
+int saveSubGraphs(GraphChunk* subgraphs, int numParts, const char* filename) {
     FILE* file = fopen(filename, "w");
     if (!file) {
         perror("Nie mozna otworzyc pliku do zapisu");
-        return;
+        return ERR_SAVE_FILE_OPEN;
     }
 
     for (int i = 0; i < numParts; i++) {
@@ -12,35 +15,34 @@ void saveSubGraphs(GraphChunk* subgraphs, int numParts, const char* filename) {
         for (int j = 0; j < subgraphs[i]->totalVertices; j++) {
             Vertex v = subgraphs[i]->vertices[j];
             if (!v) continue;  // tylko pomijaj NULL-e, nie puste
-        
+
             fprintf(file, "%d:", v->id);
             for (int k = 0; k < v->degree; k++) {
                 fprintf(file, " %d", v->edges[k]);
             }
-            fprintf(file, " (%d,%d)\n", v->x, v->y); 
-        }        
+            fprintf(file, " (%d,%d)\n", v->x, v->y);
+        }
     }
 
     fclose(file);
     printf("Grafy zapisane do pliku: %s\n", filename);
+    return 0;
 }
-void saveSubGraphsCompactBinary(GraphChunk* subgraphs, uint8_t numParts, const char* filename) {
+#define ERR_SAVE_BIN_FILE_OPEN 6
+
+int saveSubGraphsCompactBinary(GraphChunk* subgraphs, uint8_t numParts, const char* filename) {
     FILE* file = fopen(filename, "wb");
     if (!file) {
         perror("Nie mozna otworzyc pliku do zapisu");
-        return;
+        return ERR_SAVE_BIN_FILE_OPEN;
     }
-
-    // --- NAGŁÓWEK ---
+    // NAGŁÓWEK 
     char signature[4] = {'S', 'U', 'B', 'G'}; // sygnatura pliku
     uint8_t version = 1;                     // wersja formatu
 
-    fwrite(signature, sizeof(char), 4, file);  // zapisujemy sygnature
-    fwrite(&version, sizeof(uint8_t), 1, file); // zapisujemy wersje
-    fwrite(&numParts, sizeof(uint8_t), 1, file); // zapisujemy liczbe podgrafow
-    // --- KONIEC NAGŁÓWKA ---
-
-    // --- DANE GRAFÓW ---
+    fwrite(signature, sizeof(char), 4, file);     // zapisujemy sygnature
+    fwrite(&version, sizeof(uint8_t), 1, file);   // zapisujemy wersje
+    fwrite(&numParts, sizeof(uint8_t), 1, file);  // zapisujemy liczbe podgrafow
     for (uint8_t i = 0; i < numParts; i++) {
         GraphChunk g = subgraphs[i];
 
@@ -74,6 +76,7 @@ void saveSubGraphsCompactBinary(GraphChunk* subgraphs, uint8_t numParts, const c
 
     fclose(file);
     printf("Grafy zapisane do pliku binarnego: %s\n", filename);
+    return 0;
 }
 GraphChunk* loadSubGraphsFromBinary(const char* filename, int* outNumParts) {
     FILE* file = fopen(filename, "rb");

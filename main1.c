@@ -7,6 +7,7 @@
 #include "pliki.h"
 #include "split.h"
 #include "validation.h"
+
 long getFileSize(const char* filename) {
     FILE* file = fopen(filename, "rb");
     if (!file) {
@@ -14,11 +15,18 @@ long getFileSize(const char* filename) {
         return -1;
     }
 
-    fseek(file, 0, SEEK_END);       // Przeskocz na koniec pliku
-    long size = ftell(file);        // Pobierz pozycję wskaźnika = rozmiar
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);        
     fclose(file);
     return size;
 }
+
+#define ERR_UNKNOWN_FLAG 1
+#define ERR_NO_INPUT_FILE 2
+#define ERR_INVALID_GRAPH 3
+#define ERR_GRAPH_SPLIT_FAIL 4
+#define ERR_SAVE_BIN_FILE_OPEN 6
+#define GRAPH_CONNECTED 0
 
 int main(int argc, char **argv) {
     clock_t start = clock();
@@ -35,48 +43,64 @@ int main(int argc, char **argv) {
     while ((opt = getopt(argc, argv, "a:b:d:p:fg:h")) != -1) {
         switch (opt) {
             case 'a':
-                strcpy(tekstowy, optarg);  // nazwa pliku tekstowego
+                strcpy(tekstowy, optarg);
                 break;
             case 'b':
-                strcpy(binaryname, optarg);  // nazwa pliku binarnego
+                strcpy(binaryname, optarg);
                 break;
             case 'd':
-                maxDiff = atof(optarg);  // różnica procentowa
+                maxDiff = atof(optarg);
                 break;
             case 'p':
-                numParts = atoi(optarg);  // liczba podgrafów
+                numParts = atoi(optarg);
                 break;
             case 'f':
-                forceSplit = true;  // wymuszenie podziału
+                forceSplit = true;
                 break;
             case 'g':
-                x = atoi(optarg);  // numer grafu z pliku
+                x = atoi(optarg);
                 break;
             case 'h':
                 printf("Uzycie: ./a.out <plik> [-g numer] [-p liczba] [-d procent] [-a plik.txt] [-b plik.bin] [-f]\n");
                 return 0;
             default:
                 fprintf(stderr, "Nieznana flaga. Uzyj -h po pomoc.\n");
-                return 1;
+                return ERR_UNKNOWN_FLAG;
         }
     }
 
     if (optind >= argc) {
         fprintf(stderr, "Brak pliku z grafem.\n");
-        return 1;
+        return ERR_NO_INPUT_FILE;
     }
 
     GraphChunk graph = addEdges(argv[optind], x);
-    validateGraphChunk(graph);
-    if(!isGraphConnected(graph)){
-        fprintf(stderr ,"Bledny zapis grafu w pliku wejsciowm\n");
-        return 2;
+    if (!graph) {
+        fprintf(stderr, "Blad podczas tworzenia grafu. Kod bledu: %d\n", lastgrapherror);
+        return lastgrapherror;
     }
+    int addedgeserrors = edgesErrors;
+    if (addedgeserrors != 0) {
+        fprintf(stderr, "Blad podczas dodawania krawedzi. Kod bledu: %d\n", addedgeserrors);
+        freeGraphChunk(graph);
+        return addedgeserrors;
+    }
+    int pomstatus = validateGraphChunk(graph);
+    if(pomstatus!=0){
+        return pomstatus;
+    }
+    if (isGraphConnected(graph)!= GRAPH_CONNECTED) {
+        fprintf(stderr ,"Bledny zapis grafu w pliku wejsciowm\n");
+        return ERR_INVALID_GRAPH;
+    }
+
     int resault = -100;
     GraphChunk* parts = splitGraphRetryIfNeeded(graph, numParts, maxDiff);
-    if(numParts<=2 &&  getFinalDiffvalue(parts, numParts, graph->totalVertices) > maxDiff && !forceSplit){
+
+    if (numParts <= 2 && getFinalDiffvalue(parts, numParts, graph->totalVertices) > maxDiff && !forceSplit) {
         resault = balanceSubGraphsTurbo(graph, parts, numParts, maxDiff, forceSplit);
     }
+
     bool czyweszlo = false;
     if ((parts == NULL && forceSplit) || (resault == -1 && forceSplit)) {
         for (int i = 2; i < graph->totalVertices; i++) {
@@ -94,13 +118,17 @@ int main(int argc, char **argv) {
     if (!parts || resault == -1 || getFinalDiffvalue(parts, numParts, graph->totalVertices) > maxDiff) {
         fprintf(stderr, "Nie udalo sie podzielic grafu.\n");
         freeGraphChunk(graph);
-        return 1;
+        return ERR_GRAPH_SPLIT_FAIL;
     }
-    if(!czyweszlo){
+
+    if (!czyweszlo) {
         getFinalDiff(parts, numParts, graph->totalVertices);
     }
-    saveSubGraphs(parts, numParts, tekstowy);
-    saveSubGraphsCompactBinary(parts, numParts, binaryname);
+
+    int code = saveSubGraphs(parts, numParts, tekstowy);
+    if (code != 0) return code;
+
+    if (saveSubGraphsCompactBinary(parts, numParts, binaryname) != 0) return ERR_SAVE_BIN_FILE_OPEN;
 
     for (int i = 0; i < numParts; i++) {
         freeGraphChunk(parts[i]);
@@ -117,3 +145,4 @@ int main(int argc, char **argv) {
 
     return 0;
 }
+

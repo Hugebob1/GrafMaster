@@ -43,6 +43,8 @@ typedef struct GraphChunk {
 // [neighbor_degree (uint16_t)]
 
 // Function prototypes
+extern int lastgrapherror;
+extern int edgesErrors;
 Vertex createVertex(int id, int numEdges); //ok
 GraphChunk createGraphChunk(const char *fileName); //ok
 GraphChunk addEdges(const char *fileName, int x); //ok
