@@ -199,6 +199,11 @@ GraphChunk* splitGraphRetryIfNeeded(GraphChunk graph, int numParts, float maxDif
 void getFinalDiff(GraphChunk *parts, int numParts, int total) {
     int minSize = total, maxSize = 0;
     int* partSizes = calloc(numParts, sizeof(int));
+    if (!partSizes) {
+        perror("calloc failed");
+        exit(EXIT_FAILURE);
+    }
+
     for (int i = 0; i < numParts; i++) {
         for (int j = 0; j < total; j++) {
             if (parts[i]->vertices[j]) partSizes[i]++;
@@ -209,14 +214,22 @@ void getFinalDiff(GraphChunk *parts, int numParts, int total) {
         if (partSizes[i] < minSize) minSize = partSizes[i];
         if (partSizes[i] > maxSize) maxSize = partSizes[i];
     }
+
     float baseSize = total / (float)numParts;
     float diff = (maxSize - minSize) / baseSize * 100.0f;
     printf("Roznica wierzcholkow: %.2f%%\n", diff);
+
+    free(partSizes);
 }
 
 float getFinalDiffvalue(GraphChunk *parts, int numParts, int total) {
     int minSize = total, maxSize = 0;
     int* partSizes = calloc(numParts, sizeof(int));
+    if (!partSizes) {
+        perror("calloc failed");
+        exit(EXIT_FAILURE);
+    }
+
     for (int i = 0; i < numParts; i++) {
         for (int j = 0; j < total; j++) {
             if (parts[i]->vertices[j]) partSizes[i]++;
@@ -227,6 +240,9 @@ float getFinalDiffvalue(GraphChunk *parts, int numParts, int total) {
         if (partSizes[i] < minSize) minSize = partSizes[i];
         if (partSizes[i] > maxSize) maxSize = partSizes[i];
     }
+
+    free(partSizes);
+
     float baseSize = total / (float)numParts;
     float diff = (maxSize - minSize) / baseSize * 100.0f;
     return diff;
