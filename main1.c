@@ -93,16 +93,10 @@ int main(int argc, char **argv) {
         fprintf(stderr ,"Bledny zapis grafu w pliku wejsciowm\n");
         return ERR_INVALID_GRAPH;
     }
-
-    int resault = -100;
     GraphChunk* parts = splitGraphRetryIfNeeded(graph, numParts, maxDiff);
 
-    if (numParts <= 2 && getFinalDiffvalue(parts, numParts, graph->totalVertices) > maxDiff && !forceSplit) {
-        resault = balanceSubGraphsTurbo(graph, parts, numParts, maxDiff, forceSplit);
-    }
-
     bool czyweszlo = false;
-    if ((parts == NULL && forceSplit) || (resault == -1 && forceSplit)) {
+    if ((parts == NULL && forceSplit)) {
         for (int i = 2; i < graph->totalVertices; i++) {
             parts = splitGraphRetryIfNeeded(graph, i, 100000.0f);
             if (parts != NULL) {
@@ -115,7 +109,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    if (!parts || resault == -1 || getFinalDiffvalue(parts, numParts, graph->totalVertices) > maxDiff) {
+    if ((parts==NULL || getFinalDiffvalue(parts, numParts, graph->totalVertices) > maxDiff) && !forceSplit) {
         fprintf(stderr, "Nie udalo sie podzielic grafu.\n");
         freeGraphChunk(graph);
         return ERR_GRAPH_SPLIT_FAIL;
