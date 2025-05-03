@@ -43,31 +43,68 @@ int main(int argc, char **argv) {
     while ((opt = getopt(argc, argv, "a:b:d:p:fg:h")) != -1) {
         switch (opt) {
             case 'a':
-                strcpy(tekstowy, optarg);
+                if (!optarg) {
+                    fprintf(stderr, "Brak argumentu dla -a (plik tekstowy)\n");
+                    return ERR_UNKNOWN_FLAG;
+                }
+                strncpy(tekstowy, optarg, sizeof(tekstowy) - 1);
+                tekstowy[sizeof(tekstowy) - 1] = '\0';
                 break;
+    
             case 'b':
-                strcpy(binaryname, optarg);
+                if (!optarg) {
+                    fprintf(stderr, "Brak argumentu dla -b (plik binarny)\n");
+                    return ERR_UNKNOWN_FLAG;
+                }
+                strncpy(binaryname, optarg, sizeof(binaryname) - 1);
+                binaryname[sizeof(binaryname) - 1] = '\0';
                 break;
+    
             case 'd':
+                if (!optarg) {
+                    fprintf(stderr, "Brak argumentu dla -d (procent)\n");
+                    return ERR_UNKNOWN_FLAG;
+                }
                 maxDiff = atof(optarg);
+                if (maxDiff < 0.0f) {
+                    fprintf(stderr, "Procent roznicy nie moze byc ujemny: %s\n", optarg);
+                    return ERR_UNKNOWN_FLAG;
+                }
                 break;
+    
             case 'p':
+                if (!optarg) {
+                    fprintf(stderr, "Brak argumentu dla -p (liczba podgrafow)\n");
+                    return ERR_UNKNOWN_FLAG;
+                }
                 numParts = atoi(optarg);
+                if (numParts <= 0) {
+                    fprintf(stderr, "Liczba podgrafow musi byc dodatnia: %s\n", optarg);
+                    return ERR_UNKNOWN_FLAG;
+                }
                 break;
+    
             case 'f':
                 forceSplit = true;
                 break;
+    
             case 'g':
+                if (!optarg) {
+                    fprintf(stderr, "Brak argumentu dla -g (parametr x)\n");
+                    return ERR_UNKNOWN_FLAG;
+                }
                 x = atoi(optarg);
                 break;
+    
             case 'h':
                 printf("Uzycie: ./a.out <plik> [-g numer] [-p liczba] [-d procent] [-a plik.txt] [-b plik.bin] [-f]\n");
                 return 0;
+    
             default:
                 fprintf(stderr, "Nieznana flaga. Uzyj -h po pomoc.\n");
                 return ERR_UNKNOWN_FLAG;
         }
-    }
+    }    
 
     if (optind >= argc) {
         fprintf(stderr, "Brak pliku z grafem.\n");
@@ -94,7 +131,6 @@ int main(int argc, char **argv) {
         return ERR_INVALID_GRAPH;
     }
     GraphChunk* parts = splitGraphRetryIfNeeded(graph, numParts, maxDiff);
-
     bool czyweszlo = false;
     if ((parts == NULL && forceSplit)) {
         for (int i = 2; i < graph->totalVertices; i++) {
