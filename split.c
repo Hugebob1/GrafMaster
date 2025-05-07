@@ -114,7 +114,7 @@ GraphChunk* splitGraphGreedyBalanced(GraphChunk graph, int numParts, float maxDi
         Vertex copy = createVertex(orig->id, orig->degree);
         copy->degree = 0;
 
-        // 👇 KLUCZOWE: kopiowanie wspolrzednych x/y
+        // kopiowanie wspolrzednych x/y
         copy->x = orig->x;
         copy->y = orig->y;
 

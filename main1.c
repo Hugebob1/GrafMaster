@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
                 break;
     
             case 'h':
-                printf("Uzycie: ./a.out <plik> [-g numer] [-p liczba] [-d procent] [-a plik.txt] [-b plik.bin] [-f]\n");
+                printf("Mozliwe opcje: ./a.out [-g numer] [-p liczba] [-d procent] [-a plik.txt] [-b plik.bin] [-f] <plik>\n");
                 return 0;
     
             default:
