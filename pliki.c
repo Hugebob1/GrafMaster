@@ -30,7 +30,7 @@ int saveSubGraphs(GraphChunk* subgraphs, int numParts, const char* filename) {
 }
 #define ERR_SAVE_BIN_FILE_OPEN 6
 
-int saveSubGraphsCompactBinary(GraphChunk* subgraphs, uint8_t numParts, const char* filename) {
+int saveSubGraphsCompactBinary(GraphChunk* subgraphs, uint16_t numParts, const char* filename) {
     FILE* file = fopen(filename, "wb");
     if (!file) {
         perror("Nie mozna otworzyc pliku do zapisu");
@@ -43,7 +43,7 @@ int saveSubGraphsCompactBinary(GraphChunk* subgraphs, uint8_t numParts, const ch
     fwrite(signature, sizeof(char), 4, file);     // zapisujemy sygnature
     fwrite(&version, sizeof(uint8_t), 1, file);   // zapisujemy wersje
     fwrite(&numParts, sizeof(uint8_t), 1, file);  // zapisujemy liczbe podgrafow
-    for (uint8_t i = 0; i < numParts; i++) {
+    for (uint16_t i = 0; i < numParts; i++) {
         GraphChunk g = subgraphs[i];
 
         uint16_t count = 0;
